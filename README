@@ -1,0 +1,7 @@
+HRWA Manager
+
+This is the new version of the HRWA Manager application.
+
+Maven build requires the following JVM options:
+
+-Xss2m (Because of: https://jira.codehaus.org/browse/PLXCOMP-208)
