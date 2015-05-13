@@ -31,7 +31,7 @@ public class ArchiveFilesToMysqlTask extends AbstractTask {
 		int numberOfFilesToProcess = archiveFiles.size();
 		
 		//For each archive file, queue up a worker
-		ThreadPoolExecutor executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(2);
+		ThreadPoolExecutor executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(HrwaManager.maxNumberOfThreads);
 		for(File archiveFile : archiveFiles) {
 			Runnable worker = new ArchiveToMysqlWorker(archiveFile.getAbsolutePath());
 			executor.execute(worker);
@@ -47,9 +47,11 @@ public class ArchiveFilesToMysqlTask extends AbstractTask {
         }
         
         System.out.println(
-        	HrwaManager.getCurrentAppMemoryUsageMessage() + "\n" +
-        	"Done."
-        );
+    		"Processed " + numberOfFilesToProcess + " of " + numberOfFilesToProcess + " archive files." + "\n" +
+    		HrwaManager.getCurrentAppMemoryUsageMessage()
+    	);
+        
+        System.out.println("Done.");
 	}
 	
 	public ArrayList<File> getAlphabeticallySortedListOfArchiveFiles(String pathToDirectory) {
