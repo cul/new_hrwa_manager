@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import edu.columbia.ldpd.hrwa.tasks.AbstractTask;
-import edu.columbia.ldpd.hrwa.tasks.ArchiveFilesToMysqlTask;
+import edu.columbia.ldpd.hrwa.tasks.ProcessPageDataTask;
 
 public class HrwaManager {
 
@@ -36,11 +36,10 @@ public class HrwaManager {
 	public static String sitesSolrUrl;
 	public static String pagesSolrUrl;
 	public static String archiveFileDirectory;
-	public static boolean runTaskVoyagerToMysql;
-	public static boolean runTaskRelatedHostsFileToMysql;
-	public static boolean runTaskArchiveFilesToMysql;
-	public static boolean runTaskMysqlSitesToSolr;
-	public static boolean runTaskMysqlPagesToSolr;
+	public static boolean runTaskProcessSiteData;
+	public static boolean runTaskProcessPageData;
+	public static boolean runTaskSiteDataToSolr;
+	public static boolean runTaskPageDataToSolr;
 	public static int maxNumberOfThreads;
 	public static long minAvailableMemoryInBytesForNewProcess;
 
@@ -59,11 +58,10 @@ public class HrwaManager {
 		ArrayList<AbstractTask> tasksToRun = new ArrayList<AbstractTask>();
 		
 		//Proper task order defined below
-		if(HrwaManager.runTaskVoyagerToMysql){}
-		if(HrwaManager.runTaskRelatedHostsFileToMysql){}
-		if(HrwaManager.runTaskArchiveFilesToMysql){ tasksToRun.add(new ArchiveFilesToMysqlTask()); }
-		if(HrwaManager.runTaskMysqlPagesToSolr){}
-		if(HrwaManager.runTaskMysqlPagesToSolr){}
+		if(HrwaManager.runTaskProcessSiteData){}
+		if(HrwaManager.runTaskProcessPageData){ tasksToRun.add(new ProcessPageDataTask()); }
+		if(HrwaManager.runTaskPageDataToSolr){}
+		if(HrwaManager.runTaskPageDataToSolr){}
 		
 		for(AbstractTask task : tasksToRun) {
 			task.runTask();
@@ -91,15 +89,13 @@ public class HrwaManager {
 		options.addOption("archive_file_directory", true,
 				"Directory where ARC/WARC files live.");
 		// Task-related options
-		options.addOption("run_task_voyager_to_mysql", false,
-				"Retrieve site data from Voyager and save it in the database.");
-		options.addOption("run_task_related_hosts_file_to_mysql", false,
-				"Extract data from related hosts file and save it in the database.");
-		options.addOption("run_task_archive_files_to_mysql", false,
-				"Extract data from ARC/WARC files and save it in the database.");
-		options.addOption("run_task_mysql_sites_to_solr", false,
-				"Index SITE data from database into solr sites core.");
-		options.addOption("run_task_mysql_pages_to_solr", false,
+		options.addOption("run_task_process_site_data", false,
+				"Process site data from Voyager (and related hosts file) and save it to the datastore.");
+		options.addOption("run_task_process_page_data", false,
+				"Process page data from ARC/WARC files and save it to the datastore.");
+		options.addOption("run_task_site_data_to_solr", false,
+				"Index SITE data from datastore into solr sites core.");
+		options.addOption("run_task_pages_to_solr", false,
 				"Index PAGE data from database into solr pages core.");
 		options.addOption("max_number_of_threads", true,
 				"Maximum number of threads to use for concurrent processing (when applicable).");
@@ -117,19 +113,18 @@ public class HrwaManager {
 				System.exit(HrwaManager.EXIT_CODE_SUCCESS);
 			} else {
 				// Handle actual options
-				HrwaManager.mysqlHostname = cmdLine.getOptionValue("mysql_hostname");
-				HrwaManager.mysqlPort = Integer.parseInt(cmdLine.getOptionValue("mysql_port", "3306"));
-				HrwaManager.mysqlDatabase = cmdLine.getOptionValue("mysql_database");
-				HrwaManager.mysqlUsername = cmdLine.getOptionValue("mysql_username");
-				HrwaManager.mysqlPassword = cmdLine.getOptionValue("mysql_password");
+//				HrwaManager.mysqlHostname = cmdLine.getOptionValue("mysql_hostname");
+//				HrwaManager.mysqlPort = Integer.parseInt(cmdLine.getOptionValue("mysql_port", "3306"));
+//				HrwaManager.mysqlDatabase = cmdLine.getOptionValue("mysql_database");
+//				HrwaManager.mysqlUsername = cmdLine.getOptionValue("mysql_username");
+//				HrwaManager.mysqlPassword = cmdLine.getOptionValue("mysql_password");
 				HrwaManager.sitesSolrUrl = cmdLine.getOptionValue("sites_solr_url");
 				HrwaManager.pagesSolrUrl = cmdLine.getOptionValue("pages_solr_url");
 				HrwaManager.archiveFileDirectory = cmdLine.getOptionValue("archive_file_directory");
-				HrwaManager.runTaskVoyagerToMysql = cmdLine.hasOption("run_task_voyager_to_mysql");
-				HrwaManager.runTaskRelatedHostsFileToMysql = cmdLine.hasOption("run_task_related_hosts_file_to_mysql");
-				HrwaManager.runTaskArchiveFilesToMysql = cmdLine.hasOption("run_task_archive_files_to_mysql");
-				HrwaManager.runTaskMysqlPagesToSolr = cmdLine.hasOption("run_task_mysql_sites_to_solr");
-				HrwaManager.runTaskMysqlPagesToSolr = cmdLine.hasOption("run_task_mysql_pages_to_solr");
+				HrwaManager.runTaskProcessSiteData = cmdLine.hasOption("run_task_process_site_data");
+				HrwaManager.runTaskProcessPageData = cmdLine.hasOption("run_task_process_page_data");
+				HrwaManager.runTaskSiteDataToSolr = cmdLine.hasOption("run_task_site_data_to_solr");
+				HrwaManager.runTaskPageDataToSolr = cmdLine.hasOption("run_task_page_data_to_solr");
 				HrwaManager.maxNumberOfThreads = Integer.parseInt(cmdLine.getOptionValue("max_number_of_threads", "1"));
 				
 				if(cmdLine.hasOption("min_available_memory_in_bytes_for_new_process")) {

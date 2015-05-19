@@ -12,14 +12,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.io.FileUtils;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
-import edu.columbia.ldpd.hrwa.tasks.workers.ArchiveToMysqlWorker;
+import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
+import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 
-public class ArchiveFilesToMysqlTask extends AbstractTask {
+public class ProcessPageDataTask extends AbstractTask {
 	
 	public static final int STATUS_POLLING_INTERVAL_IN_MILLIS = 10000; // How frequently we get status messages about progress during processing. 
 	private static final String[] archiveFileExtensions = {"arc.gz", "warc.gz"};
 	
-	public ArchiveFilesToMysqlTask() {
+	public ProcessPageDataTask() {
 		
 	}
 
@@ -33,7 +34,7 @@ public class ArchiveFilesToMysqlTask extends AbstractTask {
 		//For each archive file, queue up a worker
 		ThreadPoolExecutor executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(HrwaManager.maxNumberOfThreads);
 		for(File archiveFile : archiveFiles) {
-			Runnable worker = new ArchiveToMysqlWorker(archiveFile.getAbsolutePath());
+			Runnable worker = new ProcessPageDataWorker(archiveFile.getAbsolutePath());
 			executor.execute(worker);
 		}
         executor.shutdown();

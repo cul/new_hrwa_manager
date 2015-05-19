@@ -1,3 +1,7 @@
+# Project-specific
+/src/test/resources/*.warc
+/src/test/resources/*.arc
+
 # Ignore temp files
 *~
 \#*\#
