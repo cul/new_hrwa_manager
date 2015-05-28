@@ -8,10 +8,6 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.util.Iterator;
 
-import org.archive.io.ArchiveRecord;
-import org.archive.io.ArchiveRecordHeader;
-import org.archive.io.arc.ARCReaderFactory;
-import org.archive.io.warc.WARCReaderFactory;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
 import org.jwat.arc.ArcRecordBase;

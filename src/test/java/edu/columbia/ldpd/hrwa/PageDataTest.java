@@ -5,10 +5,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.archive.io.ArchiveRecord;
-import org.archive.io.ArchiveRecordHeader;
-import org.archive.io.arc.ARCReaderFactory;
-import org.archive.io.warc.WARCReaderFactory;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.jwat.arc.ArcReader;
@@ -32,6 +28,7 @@ public class PageDataTest {
     	//Get the first record, which is the arc info record
 		ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(arcReader.getNextRecord());
 		
+		int counter = 0;
 		while (true) {
 			ArcRecordBase arcRecord = arcReader.getNextRecord();
 			if(arcRecord == null) {break;}
@@ -49,6 +46,9 @@ public class PageDataTest {
 			assertTrue(pageData.fulltext != null);
 			assertTrue(pageData.mimetypeFromHeader != null);
 			assertTrue(pageData.detectedMimetype != null);
+			
+			counter++;
+			if(counter == 100) {break;} // Only testing the first 100 records
 		}
     }
     
@@ -60,6 +60,7 @@ public class PageDataTest {
 		//Get the first record, which is the warc info record
 		ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(warcReader.getNextRecord());
 		
+		int counter = 0;
 		while (true) {
 			WarcRecord warcRecord = warcReader.getNextRecord();
 			if(warcRecord == null) {break;}
@@ -77,6 +78,9 @@ public class PageDataTest {
 			assertTrue(pageData.fulltext != null);
 			assertTrue(pageData.mimetypeFromHeader != null);
 			assertTrue(pageData.detectedMimetype != null);
+			
+			counter++;
+			if(counter == 100) {break;} // Only testing the first 100 records
 		}
     }
 

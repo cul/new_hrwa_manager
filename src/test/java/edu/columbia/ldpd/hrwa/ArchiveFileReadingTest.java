@@ -5,10 +5,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.archive.io.ArchiveRecord;
-import org.archive.io.ArchiveRecordHeader;
-import org.archive.io.arc.ARCReaderFactory;
-import org.archive.io.warc.WARCReaderFactory;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.jwat.arc.ArcReader;
