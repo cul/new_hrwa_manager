@@ -59,123 +59,15 @@ public class PageData {
 	//Constants
 	public static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 	
+	
+	/**
+	 * Creates an empty PageData record. Generally used when creating a PageData record from a non-ARC/WARC file data source.  Each publicly-accessible field can be set manually.
+	 * @param archiveRecord
+	 */
 	public PageData() {
 		
 	}
 
-	/**
-	 * Creates a new PageData record from an ArchiveRecord
-	 * @param archiveRecord
-	 */
-	public PageData(ArchiveRecord archiveRecord) {
-		
-		ArchiveRecordHeader header = archiveRecord.getHeader();
-		
-		this.originalUrl = header.getUrl();
-		this.archiveFileName = header.getReaderIdentifier();
-		this.archiveFileOffset = header.getOffset();
-		this.contentLength = header.getContentLength();
-		this.crawlDate = header.getDate();
-		
-		this.mimetypeFromHeader = header.getMimetype();
-		
-		//Some fields work differently for ARC vs WARC files
-		if (archiveRecord instanceof ARCRecord) {
-			//Record identifier
-			//this.recordIdentifier = header.getRecordIdentifier();
-			
-			//Status code
-			ARCRecord arcRecord = (ARCRecord)archiveRecord;
-			int statusCode = arcRecord.getStatusCode();
-			//Ignore anything with a non-200 status because it's not useful for us
-			if(statusCode != 200) {
-				this.forceSkipThisRecord = true;
-			}
-			
-		} else if (archiveRecord instanceof WARCRecord) {
-			
-			WARCRecord warcRecord = (WARCRecord)archiveRecord;
-			
-			//Record identifier
-			//this.recordIdentifier = header.getHeaderValue(WARCRecord.HEADER_KEY_ID).toString();
-			// WARC Files say what their WARC type is, so we can use this to ignore irrelevant ones.
-			if( ! header.getHeaderValue(WARCRecord.HEADER_KEY_TYPE).toString().equals("response") ) {
-				//We only want to process WARC files of type "response"
-				this.forceSkipThisRecord = true;
-			}
-			
-		}
-		
-		// Don't do heavier mimetype and fulltext extraction work if we're going to skip this record 
-		if( shouldBeSkipped() ) {
-			return;
-		}
-		
-		// Derive hostString from originalUrl when applicable (only runs if shouldBeSkipped() passes, since we check for the presence of an originalUrl value)
-		this.hostString = MetadataUtils.extractHostString(this.originalUrl);
-		
-		//Use Tika for mimetype detection and text extraction
-		//Extract from file
-		//Note: If we need to do this in chunks due to memory constraints, there's a how-to example here: https://tika.apache.org/1.8/examples.html
-		try {
-			//Note: Closing a ByteArrayOutputStream has no effect.  See: https://docs.oracle.com/javase/7/docs/api/java/io/ByteArrayOutputStream.html
-			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024);
-			archiveRecord.dump(byteArrayOutputStream);
-			
-			InputStream stream = null;
-			try {
-				stream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-				
-				Tika tika = new Tika();
-				tika.setMaxStringLength(ProcessPageDataWorker.MAX_FULLTEXT_CHARS_TO_EXTRACT);
-				//Detect the mimetype
-				// Note: detect() only reads part of the file, does not close the stream, and actually rewinds the stream.
-				this.detectedMimetype = tika.detect(stream);
-				//Extract text and compress whitespace to reduce storage requirements
-				this.fulltext = WHITESPACE_PATTERN.matcher(tika.parseToString(stream)).replaceAll(" ").trim();
-				
-				//System.out.println("Fulltext length: " + this.fulltext.length());
-//				if(this.fulltext.length() == 0) {
-//					System.out.println("Length is 0 for: " + this.originalUrl);
-//				} else {
-//					System.out.println("Fulltext starts with: " + this.fulltext.substring(0, 100));
-//				}
-				
-				
-				
-				
-				//Alternate method of parsing, using an AutoDetectParser
-//				AutoDetectParser parser = new AutoDetectParser();
-//			    BodyContentHandler handler = new BodyContentHandler(ProcessPageDataWorker.MAX_FULLTEXT_CHARS_TO_EXTRACT);
-//			    Metadata metadata = new Metadata();
-//				//Detect the mimetype
-//				// Note: detect() only reads part of the file, does not close the stream, and actually rewinds the stream.
-//				this.detectedMimetype = parser.getDetector().detect(stream, metadata).getType();
-//				parser.parse(stream, handler, metadata);
-//				//Extract text and compress whitespace to reduce storage requirements
-//				this.fulltext = whitespaceCompressorPattern.matcher(handler.toString()).replaceAll(" ").trim();
-				
-				
-				
-			} catch (TikaException e) {
-				HrwaManager.logger.error("TikaException encountered while parsing content with Tika.  Message: " + e.getMessage());
-			} finally {
-			    stream.close();
-			}
-			
-		} catch (IOException e) {
-			HrwaManager.logger.error("IOException encountered while parsing content with Tika.  Message: " + e.getMessage());
-		} finally {
-			//We're done with this archive record.  Make sure to close it.
-			try {
-				archiveRecord.close();
-			} catch (IOException e) {
-				HrwaManager.logger.error("Error encountered while closing ArchiveRecord.  Message: " + e.getMessage());				
-			}
-		}
-	}
-	
-	
 	/**
 	 * Creates a new PageData record from a WarcRecord
 	 * @param archiveRecord

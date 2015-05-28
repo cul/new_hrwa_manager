@@ -30,8 +30,7 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	public static final int HIGH_MEMORY_USAGE_POLLING_DELAY_IN_MILLIS = 5000; // While waiting in times of high memory usage, check back every X milliseconds to see if a new job can start.
 	public static final int NUM_MILLIS_OF_WAIT_TIME_BEFORE_LOGGING_WARNING = 120000; // If we wait for too long, this should be logged so that the user can tweak memory limits.
-	//public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT = 100000; // Higher numbers will result in higher memory usage for larger files
-	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT =   1000000; // 100000 == 0.1 MB
+	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT =   100000; // 100000 == .1 MB.  Higher numbers will result in higher memory usage for larger files.
 	
 	//private Connection conn;
 	private File archiveFile;
