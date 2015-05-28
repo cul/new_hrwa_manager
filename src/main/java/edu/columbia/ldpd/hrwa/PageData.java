@@ -1,31 +1,17 @@
 package edu.columbia.ldpd.hrwa;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AutoDetectParser;
-import org.apache.tika.sax.BodyContentHandler;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.HttpHeader;
 import org.jwat.common.Payload;
-import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcRecord;
-import org.xml.sax.SAXException;
 
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
 import edu.columbia.ldpd.hrwa.util.MetadataUtils;

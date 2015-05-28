@@ -1,6 +1,7 @@
 # Project-specific
 /src/test/resources/*.warc
 /src/test/resources/*.arc
+/logs
 
 # Ignore temp files
 *~

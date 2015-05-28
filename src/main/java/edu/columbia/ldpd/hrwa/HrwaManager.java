@@ -46,6 +46,7 @@ public class HrwaManager {
 	public static void main(String[] args) {
 		
 		logger.info("Starting HRWA Manager run.");
+		logger.debug("Logger running in debug mode.");
 		
 		setupAndParseCommandLineOptions(args);
 		
