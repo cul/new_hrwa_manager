@@ -1,7 +1,10 @@
 package edu.columbia.ldpd.hrwa.tasks.workers;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.util.Iterator;
 
@@ -9,7 +12,16 @@ import org.archive.io.ArchiveRecord;
 import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.warc.WARCReaderFactory;
+import org.jwat.arc.ArcReader;
+import org.jwat.arc.ArcReaderFactory;
+import org.jwat.arc.ArcRecordBase;
+import org.jwat.warc.WarcReader;
+import org.jwat.warc.WarcReaderFactory;
+import org.jwat.warc.WarcRecord;
 
+import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord;
+import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.MissingArchiveHeaderValueException;
+import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.UnexpectedRecordTypeException;
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.PageData;
 import edu.columbia.ldpd.hrwa.util.MysqlHelper;
@@ -18,7 +30,8 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	public static final int HIGH_MEMORY_USAGE_POLLING_DELAY_IN_MILLIS = 5000; // While waiting in times of high memory usage, check back every X milliseconds to see if a new job can start.
 	public static final int NUM_MILLIS_OF_WAIT_TIME_BEFORE_LOGGING_WARNING = 120000; // If we wait for too long, this should be logged so that the user can tweak memory limits.
-	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT = 100000; // Higher numbers will result in higher memory usage for larger files
+	//public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT = 100000; // Higher numbers will result in higher memory usage for larger files
+	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT =   1000000; // 100000 == 0.1 MB
 	
 	//private Connection conn;
 	private File archiveFile;
@@ -55,35 +68,73 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	public void processArchiveFile() {
 		
-		Iterator<ArchiveRecord> archiveRecordIterator;
-		
 		try {
 			if(archiveFile.getName().endsWith(".warc.gz")) {
-				archiveRecordIterator = WARCReaderFactory.get(archiveFile).iterator();
+				InputStream is = new FileInputStream(archiveFile);
+				WarcReader warcReader = WarcReaderFactory.getReader(is);
+				//Get the first record, which is the info record
+				ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(warcReader.getNextRecord());
+				while (true) {
+					WarcRecord warcRecord = warcReader.getNextRecord();
+					if(warcRecord == null) {break;}
+					processWarcRecord(warcRecord, infoRecord.archiveFileName);
+				}
 			}
 			else if(archiveFile.getName().endsWith(".arc.gz")) {
-				archiveRecordIterator = ARCReaderFactory.get(archiveFile).iterator();
+				InputStream is = new FileInputStream(archiveFile);
+				ArcReader arcReader = ArcReaderFactory.getReader(is);
+				//Get the first record, which is the info record
+				ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(arcReader.getNextRecord());
+				while (true) {
+					ArcRecordBase arcRecord = arcReader.getNextRecord();
+					if(arcRecord == null) {break;}
+					processArcRecord(arcRecord, infoRecord.archiveFileName);
+				}
+				
 			} else {
 				HrwaManager.logger.error("Skipping archive file with unexpected extension: " + archiveFile.getAbsolutePath());
 				return;
 			}
 		
-		} catch (IOException e) {
+		} catch (FileNotFoundException e) {
 			HrwaManager.logger.error(
-				"Skipping archive file due to IOException: " + archiveFile.getAbsolutePath() + "\n" +
+				"Could not find file: " + archiveFile.getAbsolutePath() + "\n" +
 				"Message: " + e.getMessage()
 			);
 			return;
+		} catch (IOException e) {
+			HrwaManager.logger.error(
+				"IOException encountered while reading file: " + archiveFile.getAbsolutePath() + "\n" +
+				"Message: " + e.getMessage()
+			);
+			return;
+		} catch (UnexpectedRecordTypeException e) {
+			HrwaManager.logger.error(
+				"Skipping archive file because the first record wasn't an info record (and this is unexpected).  Archive file: " + archiveFile.getAbsolutePath() + "\n" +
+				"Message: " + e.getMessage()
+			);
+			return;
+		} catch (MissingArchiveHeaderValueException e) {
+			HrwaManager.logger.error(
+				"Skipping archive file because the first record (an info record) was missing an expected header.  Archive file: " + archiveFile.getAbsolutePath() + "\n" +
+				"Message: " + e.getMessage()
+			);
 		}
 		
-		while (archiveRecordIterator.hasNext()) {
-			processArchiveRecord(archiveRecordIterator.next());
-		}
 	}
 	
-	public void processArchiveRecord(ArchiveRecord archiveRecord) {
-		PageData pageData = new PageData(archiveRecord);
-		
+	public void processWarcRecord(WarcRecord warcRecord, String archiveFileName) {
+		PageData pageData = new PageData(warcRecord, archiveFileName);
+		processPageData(pageData);
+	}
+	
+	public void processArcRecord(ArcRecordBase arcRecord, String archiveFileName) {
+		PageData pageData = new PageData(arcRecord, archiveFileName);
+		processPageData(pageData);
+	}
+	
+	public void processPageData(PageData pageData) {
+		//System.out.println(pageData.fulltext.length());
 	}
 
 }

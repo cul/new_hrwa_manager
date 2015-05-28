@@ -1,7 +1,9 @@
 package edu.columbia.ldpd.hrwa.util;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.regex.Pattern;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
@@ -16,9 +18,9 @@ public class MetadataUtils {
 	 * @return
 	 */
 	public static String extractHostString(String url) {
-		URI uri;
+		URL uri;
 		try {
-			uri = new URI(url);
+			uri = new URL(url);
 			String host = uri.getHost();
 			if(host == null) {
 				HrwaManager.logger.error("Unable to parse URI: " + url);
@@ -26,8 +28,8 @@ public class MetadataUtils {
 			} else {
 				return uri.getHost().replaceFirst("\\Awww\\d*\\.", "");
 			}
-		} catch (URISyntaxException e) {
-			HrwaManager.logger.error("Unable to parse URI: " + url);
+		} catch (MalformedURLException e) {
+			HrwaManager.logger.error("Unable to parse URL: " + url);
 			return null;
 		}
     }

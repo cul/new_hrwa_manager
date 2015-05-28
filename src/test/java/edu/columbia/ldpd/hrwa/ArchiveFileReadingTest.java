@@ -9,6 +9,7 @@ import org.archive.io.ArchiveRecord;
 import org.archive.io.ArchiveRecordHeader;
 import org.archive.io.arc.ARCReaderFactory;
 import org.archive.io.warc.WARCReaderFactory;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
@@ -20,9 +21,12 @@ import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcReaderFactory;
 import org.jwat.warc.WarcRecord;
 
+import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.MissingArchiveHeaderValueException;
+import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.UnexpectedRecordTypeException;
+
 public class ArchiveFileReadingTest {
 
-    @Test
+    @Ignore @Test
     public void readArcFile() throws IOException {
     	//Content length of records should be > 0 if the ARC file is read successfully
     	
@@ -56,7 +60,7 @@ public class ArchiveFileReadingTest {
 		assertTrue(contentLength > 0);
     }
     
-    @Test
+    @Ignore @Test
     public void alternateReadArcFile() throws IOException {
     	//Content length of records should be > 0 if the ARC file is read successfully
     	
@@ -85,18 +89,24 @@ public class ArchiveFileReadingTest {
 		assertTrue(contentLength > 0);
     }
     
-    @Test
-    public void alternateReadWarcFile() throws IOException {
+    @Ignore @Test
+    public void alternateReadWarcFile() throws IOException, UnexpectedRecordTypeException, MissingArchiveHeaderValueException {
     	//Content length of records should be > 0 if the WARC file is read successfully
     	
     	long contentLength = 0;
     	
     	WarcReader warcReader = WarcReaderFactory.getReader(this.getClass().getResourceAsStream("/ARCHIVEIT-1068-QUARTERLY-20748-20131004123919268-00808-wbgrp-crawl066.us.archive.org-6444.warc.gz"));
     	
+    	//Get the first record, which is the warc info record
+    	ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(warcReader.getNextRecord());
     	
 		while (true) {
 			WarcRecord warcRecord = warcReader.getNextRecord();
 			if(warcRecord == null) {break;}
+
+			PageData pageData = new PageData(warcRecord, infoRecord.archiveFileName);
+			
+			System.exit(1);
 			
 //			if(warcRecord.getHttpHeader() != null) {
 //				String statusCode = warcRecord.getHttpHeader().statusCodeStr;
