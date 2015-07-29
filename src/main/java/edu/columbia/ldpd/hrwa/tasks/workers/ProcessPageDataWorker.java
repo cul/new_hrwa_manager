@@ -6,12 +6,22 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.indices.IndexMissingException;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.Aggregation;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
 import org.jwat.arc.ArcRecordBase;
@@ -31,6 +41,9 @@ public class ProcessPageDataWorker implements Runnable {
 	public static final int HIGH_MEMORY_USAGE_POLLING_DELAY_IN_MILLIS = 5000; // While waiting in times of high memory usage, check back every X milliseconds to see if a new job can start.
 	public static final int NUM_MILLIS_OF_WAIT_TIME_BEFORE_LOGGING_WARNING = 120000; // If we wait for too long, this should be logged so that the user can tweak memory limits.
 	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT =   100000; // 100000 == .1 MB.  Higher numbers will result in higher memory usage for larger files.
+	
+	public static final String ELASTICSEARCH_ARCHIVE_FILE_INDEX = "hrwa_archive_files";
+	public static final String ELASTICSEARCH_ARCHIVE_FILE_TYPE = "archive_file";
 	
 	//private Connection conn;
 	private File archiveFile;
@@ -59,7 +72,13 @@ public class ProcessPageDataWorker implements Runnable {
 		System.out.println("Connect at: " + HrwaManager.elasticsearchHostname + ", " + HrwaManager.elasticsearchPort);
 		elasticsearchClient = new TransportClient().addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
 		
-		processArchiveFile();
+		try {
+			if( ! hasArchiveFileBeenProcessed(this.archiveFile.getName()) ) {
+				processArchiveFile();
+			}
+		} catch (IOException e) {
+			HrwaManager.logger.error("An IOException occurred while checking whether an archive file had already been processed. Archive file name: " + this.archiveFile.getName());
+		}
 		
 		//Be sure to close the connection when we're done
 		//MysqlHelper.closeConnection(conn);
@@ -121,6 +140,53 @@ public class ProcessPageDataWorker implements Runnable {
 			);
 		}
 		
+		//If we finished processing the file and didn't encounter any errors, mark this archive file as processed 
+		try {
+			this.markArchiveFileAsProcessed();
+		} catch (IOException e) {
+			HrwaManager.logger.error("An IOException occurred while trying to mark an archive file as processed. Archive file name: " + this.archiveFile.getName());
+		}
+	}
+	
+	public void markArchiveFileAsProcessed() throws IOException {
+		XContentBuilder jsonBuilder = XContentFactory.jsonBuilder()
+		    .startObject()
+		    	.field("processed", true)
+		        .field("processDate", new Date())
+		    .endObject();
+		
+		IndexResponse response = elasticsearchClient.prepareIndex(ELASTICSEARCH_ARCHIVE_FILE_INDEX, ELASTICSEARCH_ARCHIVE_FILE_TYPE, this.archiveFile.getName())
+	        .setSource(jsonBuilder)
+	        .execute()
+	        .actionGet();
+	}
+	
+	public boolean hasArchiveFileBeenProcessed(String archiveFileName) throws IOException {
+		try {
+			SearchResponse response = elasticsearchClient.prepareSearch(ELASTICSEARCH_ARCHIVE_FILE_INDEX)
+			        .setTypes(ELASTICSEARCH_ARCHIVE_FILE_TYPE)
+			        .setQuery(QueryBuilders.termQuery("_id", archiveFileName))
+			        .setFrom(0).setSize(1)
+			        .execute()
+			        .actionGet();
+			
+			SearchHits searchHits = response.getHits();
+			if(searchHits.getTotalHits() == 1) {
+				return (Boolean)(searchHits.getAt(0).sourceAsMap().get("processed"));
+			}
+			
+			return false;
+			
+	//		CountResponse response = elasticsearchClient.prepareCount(ELASTICSEARCH_ARCHIVE_FILE_INDEX)
+	//				.setQuery(QueryBuilders.termQuery("_id", archiveFileName))
+	//		        .execute()
+	//		        .actionGet();
+	//		return (response.getCount() == 1);
+			
+		} catch (IndexMissingException e) {
+			//If this index hasn't been created yet, then none of the archive files have been processed
+			return false;
+		}
 	}
 	
 	public void processWarcRecord(WarcRecord warcRecord, String archiveFileName) {
