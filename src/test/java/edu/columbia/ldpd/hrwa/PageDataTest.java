@@ -1,6 +1,7 @@
 package edu.columbia.ldpd.hrwa;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -16,10 +17,11 @@ import org.jwat.warc.WarcRecord;
 
 import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.MissingArchiveHeaderValueException;
 import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.UnexpectedRecordTypeException;
+import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class PageDataTest {
 
-	@Test
+	@Test @Ignore
     public void extractDataFromArcFile() throws Exception {
     	
     	//ARC File
@@ -52,7 +54,7 @@ public class PageDataTest {
 		}
     }
     
-    @Test
+    @Test @Ignore
     public void extractDataFromWarcFile() throws Exception {
     	
 		WarcReader warcReader = WarcReaderFactory.getReader(this.getClass().getResourceAsStream("/ARCHIVEIT-1068-QUARTERLY-20748-20131004123919268-00808-wbgrp-crawl066.us.archive.org-6444.warc.gz"));
@@ -82,6 +84,43 @@ public class PageDataTest {
 			counter++;
 			if(counter == 100) {break;} // Only testing the first 100 records
 		}
+    }
+    
+    @Test
+    public void serializePageDataToJson() {
+    	PageData pageData = new PageData();
+    	
+    	pageData.originalUrl = "http://www.example.com";
+    	pageData.hostString = MetadataUtils.extractHostString(pageData.originalUrl);
+		pageData.archiveFileName = "some-archive-file-12345.warc.gz";
+		pageData.archiveFileOffset = 42;
+		pageData.contentLength = 56779;
+		pageData.crawlDate = "20150728";
+		pageData.fulltext = "This is the full text.";
+		pageData.mimetypeFromHeader = "text/plain";
+		pageData.detectedMimetype = "text/plain";
+
+		String generatedJson = null;
+		try {
+			generatedJson = pageData.toElasticsearchJsonBuilder().string();
+		} catch (IOException e) {
+			System.out.println("Unexpected IOException: " + e.getMessage());
+			e.printStackTrace();
+		}
+		
+		String expectedJson = "{" +
+			"\"originalUrl\":\"http://www.example.com\"," +
+			"\"hostString\":\"example.com\"," +
+			"\"archiveFileName\":\"some-archive-file-12345.warc.gz\"," +
+			"\"archiveFileOffset\":42," +
+			"\"contentLength\":56779," +
+			"\"crawlDate\":\"20150728\"," +
+			"\"fulltext\":\"This is the full text.\"," +
+			"\"mimetypeFromHeader\":\"text/plain\"," +
+			"\"detectedMimetype\":\"text/plain\"" +
+		"}";
+		
+		assertEquals(expectedJson, generatedJson);
     }
 
 }

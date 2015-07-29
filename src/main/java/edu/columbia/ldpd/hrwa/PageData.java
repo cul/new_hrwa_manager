@@ -3,11 +3,21 @@ package edu.columbia.ldpd.hrwa;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.jackson.core.JsonFactory;
+import org.elasticsearch.common.jackson.core.JsonGenerator;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.jwat.arc.ArcRecordBase;
 import org.jwat.common.HttpHeader;
 import org.jwat.common.Payload;
@@ -17,6 +27,9 @@ import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
 import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class PageData {
+	
+	public static final String ELASTICSEARCH_INDEX = "hrwa_pages";
+	public static final String ELASTICSEARCH_TYPE = "page";
 	
 	// Archive File Fields
 	public String 		originalUrl; //Original url of this crawled record.
@@ -146,6 +159,36 @@ public class PageData {
 		this.contentLength = payload.getTotalLength();
 		
 		extractMimeTypeAndFulltextfromPayload(payload);
+	}
+	
+	public XContentBuilder toElasticsearchJsonBuilder() throws IOException {
+		
+		XContentBuilder builder = XContentFactory.jsonBuilder()
+		    .startObject()
+		    	.field("originalUrl", this.originalUrl)
+				.field("hostString", this.hostString)
+				.field("archiveFileName", this.archiveFileName)
+				.field("archiveFileOffset", this.archiveFileOffset)
+				.field("contentLength", this.contentLength)
+				.field("crawlDate", this.crawlDate)
+				.field("fulltext", this.fulltext)
+				.field("mimetypeFromHeader", this.mimetypeFromHeader)
+				.field("detectedMimetype", this.detectedMimetype)
+		        //.field("postDate", new Date())
+		    .endObject();
+		
+		return builder;
+	}
+	
+	public void sendToElasticsearch(Client client) throws ElasticsearchException, IOException {
+		IndexResponse response = client.prepareIndex(ELASTICSEARCH_INDEX, ELASTICSEARCH_TYPE, this.getUniqueIdForRecord())
+	        .setSource(this.toElasticsearchJsonBuilder())
+	        .execute()
+	        .actionGet();
+	}
+	
+	public String getUniqueIdForRecord() {
+		return this.archiveFileName + "---" + this.archiveFileOffset;
 	}
 	
 	public void extractMimeTypeAndFulltextfromPayload(Payload payload) {

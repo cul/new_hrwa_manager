@@ -8,6 +8,10 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.util.Iterator;
 
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
 import org.jwat.arc.ArcRecordBase;
@@ -30,6 +34,7 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	//private Connection conn;
 	private File archiveFile;
+	private Client elasticsearchClient;
 	
 	public ProcessPageDataWorker(String pathToArchiveFile) {
 		archiveFile = new File(pathToArchiveFile);
@@ -49,16 +54,16 @@ public class ProcessPageDataWorker implements Runnable {
 			try { Thread.sleep(HIGH_MEMORY_USAGE_POLLING_DELAY_IN_MILLIS); } catch (InterruptedException e) { e.printStackTrace(); }
 		}
 		
-		//Get a MySQL connection for this worker
+		//Get a connection for this worker
 		//this.conn = MysqlHelper.getNewDBConnection();
-		
+		System.out.println("Connect at: " + HrwaManager.elasticsearchHostname + ", " + HrwaManager.elasticsearchPort);
+		elasticsearchClient = new TransportClient().addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
 		
 		processArchiveFile();
 		
 		//Be sure to close the connection when we're done
 		//MysqlHelper.closeConnection(conn);
-		
-		
+		elasticsearchClient.close();
 	}
 	
 	public void processArchiveFile() {
@@ -129,7 +134,13 @@ public class ProcessPageDataWorker implements Runnable {
 	}
 	
 	public void processPageData(PageData pageData) {
-		//System.out.println(pageData.fulltext.length());
+		try {
+			pageData.sendToElasticsearch(this.elasticsearchClient);
+		} catch (ElasticsearchException e) {
+			HrwaManager.logger.error("ElasticsearchException encountered while sending PageData to Elasticsearch. File: " + pageData.archiveFileName + ", Byte Offset: " + pageData.archiveFileOffset + ", Error Message: " + e.getMessage());
+		} catch (IOException e) {
+			HrwaManager.logger.error("IOException encountered while sending PageData to Elasticsearch. File: " + pageData.archiveFileName + ", Byte Offset: " + pageData.archiveFileOffset + ", Error Message: " + e.getMessage());
+		}
 	}
 
 }

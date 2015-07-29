@@ -28,6 +28,8 @@ public class HrwaManager {
 	public static Logger logger = LoggerFactory.getLogger(HrwaManager.class);
 
 	// Options from command line
+	public static String elasticsearchHostname;
+	public static int elasticsearchPort;
 	public static String mysqlHostname;
 	public static int mysqlPort;
 	public static String mysqlDatabase;
@@ -46,7 +48,7 @@ public class HrwaManager {
 	public static void main(String[] args) {
 		
 		logger.info("Starting HRWA Manager run.");
-		logger.debug("Logger running in debug mode.");
+		logger.debug("Logger running in debug mode."); //Only shows up when we're logging in debug mode
 		
 		setupAndParseCommandLineOptions(args);
 		
@@ -78,6 +80,8 @@ public class HrwaManager {
 		options.addOption("help", false, "Usage information.");
 
 		// Options with values
+		options.addOption("elasticsearch_hostname", true, "Elasticsearch indexing/search server hostname.");
+		options.addOption("elasticsearch_port", true, "Elasticsearch indexing/search server port.");
 		options.addOption("mysql_hostname", true, "MySQL database hostname.");
 		options.addOption("mysql_port", true, "MySQL database port (default = 3306).");
 		options.addOption("mysql_database", true, "MySQL database name.");
@@ -114,6 +118,8 @@ public class HrwaManager {
 				System.exit(HrwaManager.EXIT_CODE_SUCCESS);
 			} else {
 				// Handle actual options
+				HrwaManager.elasticsearchHostname = cmdLine.getOptionValue("elasticsearch_hostname");
+				HrwaManager.elasticsearchPort = Integer.parseInt(cmdLine.getOptionValue("elasticsearch_port"));
 //				HrwaManager.mysqlHostname = cmdLine.getOptionValue("mysql_hostname");
 //				HrwaManager.mysqlPort = Integer.parseInt(cmdLine.getOptionValue("mysql_port", "3306"));
 //				HrwaManager.mysqlDatabase = cmdLine.getOptionValue("mysql_database");
