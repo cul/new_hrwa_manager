@@ -76,6 +76,11 @@ public class ProcessSiteDataWorker implements Runnable {
 		try {
 			FileInputStream fis = new FileInputStream(paramMarcXmlFile);
 			this.siteData = new SiteData(fis);
+			
+			if( ! this.siteData.isValid() ) {
+				HrwaManager.logger.error("Could not update site record with bib id: " + this.siteData.bibId + " due to the following error(s): " + StringUtils.join(this.siteData.getValidationErrors()));
+				return;
+			}
 		
 		} catch (FileNotFoundException e) {
 			HrwaManager.logger.error(

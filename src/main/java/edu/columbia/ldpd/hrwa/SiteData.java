@@ -33,6 +33,7 @@ public class SiteData {
 	public HashSet<String> relatedHostStrings = new HashSet<String>();
 	
 	public ArrayList<String> originalUrl = new ArrayList<String>();
+	public ArrayList<String> archivedUrl = new ArrayList<String>();
 	public String organizationType = null;
 	public ArrayList<String> subject = new ArrayList<String>();
 	public ArrayList<String> geographicFocus = new ArrayList<String>();
@@ -79,6 +80,17 @@ public class SiteData {
 							this.relatedHostStrings.add(relatedHostString); 
 						}
 					}
+				}
+			}
+			
+			//archivedUrl --- 920 41 $u
+			fields = betterMarcRecord.getDataFields("920");
+			for(DataField field : fields) {
+				String result = BetterMarcRecord.removeCommonTrailingCharacters(
+					StringUtils.join(BetterMarcRecord.getDataFieldValue(field, '4', '1', 'u'), ", ").trim()
+				).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space
+				if( ! result.isEmpty() ) {
+					this.archivedUrl.add(result);
 				}
 			}
 			
@@ -237,18 +249,14 @@ public class SiteData {
 	public boolean isValid() {
 		
 		if(bibId == null) { validationErrors.add("Missing bibId."); }
-		
 		if(originalUrl.size() == 0) { validationErrors.add("Missing originalUrl."); }
+		if(archivedUrl.size() == 0) { validationErrors.add("Missing archivedUrl."); }
 		if(hostStrings.size() == 0) { validationErrors.add("Missing hostString (derived from originalUrl)."); }
 		if(organizationType == null) { validationErrors.add("Missing organizationType."); }
 		if(subject.size() == 0) { validationErrors.add("Missing subject."); }
-		if(geographicFocus.size() == 0) { validationErrors.add("Missing geographicFocus."); }
-		if(organizationBasedIn == null) { validationErrors.add("Missing organizationBasedIn."); }
 		if(language.size() == 0) { validationErrors.add("Missing language."); }
 		if(title == null) { validationErrors.add("Missing title."); }
-		if(alternativeTitle.size() == 0) { validationErrors.add("Missing alternativeTitle."); }
 		if(creatorName.size() == 0) { validationErrors.add("Missing creatorName."); }
-		if(summary == null) { validationErrors.add("Missing summary."); }
 		
 		return validationErrors.size() == 0;
 	}

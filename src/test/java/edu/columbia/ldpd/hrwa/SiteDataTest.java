@@ -35,6 +35,11 @@ public class SiteDataTest {
     	ArrayList<String> expectedOriginalUrl = new ArrayList<String>();
     	expectedOriginalUrl.add("http://www.518.org");
 		assertEquals(expectedOriginalUrl, siteData.originalUrl);
+		
+		//archivedUrl
+    	ArrayList<String> expectedArchivedUrl = new ArrayList<String>();
+    	expectedArchivedUrl.add("http://wayback.archive-it.org/1068/*/http://www.518.org");
+		assertEquals(expectedArchivedUrl, siteData.archivedUrl);
     	
     	//hostString
     	ArrayList<String> expectedHostStrings = new ArrayList<String>();
@@ -104,16 +109,13 @@ public class SiteDataTest {
 		ArrayList<String> expectedValidationErrors = new ArrayList<String>();
 		expectedValidationErrors.add("Missing bibId.");
 		expectedValidationErrors.add("Missing originalUrl.");
+		expectedValidationErrors.add("Missing archivedUrl.");
 		expectedValidationErrors.add("Missing hostString (derived from originalUrl).");
 		expectedValidationErrors.add("Missing organizationType.");
 		expectedValidationErrors.add("Missing subject.");
-		expectedValidationErrors.add("Missing geographicFocus.");
-		expectedValidationErrors.add("Missing organizationBasedIn.");
 		expectedValidationErrors.add("Missing language.");
 		expectedValidationErrors.add("Missing title.");
-		expectedValidationErrors.add("Missing alternativeTitle.");
 		expectedValidationErrors.add("Missing creatorName.");
-		expectedValidationErrors.add("Missing summary.");
 		
 		ArrayList<String> validationErrors = siteData.getValidationErrors();
 		Collections.sort(expectedValidationErrors); //Sort so we don't have to worry about message order
