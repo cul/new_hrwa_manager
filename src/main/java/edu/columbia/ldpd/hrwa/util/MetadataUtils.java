@@ -18,6 +18,8 @@ public class MetadataUtils {
 	 * @return
 	 */
 	public static String extractHostString(String url) {
+		if( ! url.startsWith("http://") ) { url = "http://" + url; } //This is so that an hoststring (which has no protocol) can also be run through this method 
+		
 		URL uri;
 		try {
 			uri = new URL(url);

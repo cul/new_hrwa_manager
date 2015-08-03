@@ -92,6 +92,13 @@
 			<version>1.52</version>
 		</dependency>
 
+		<!-- Easier MARC Processing -->
+		<dependency>
+			<groupId>info.freelibrary</groupId>
+			<artifactId>freelib-marc4j</artifactId>
+			<version>2.6.3</version>
+		</dependency>
+
 		<!-- ______________________ -->
 		<!-- ARC/WARC Dependencies -->
 		<!-- ______________________ -->
@@ -141,6 +148,20 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		
+		<!-- Solr -->
+		<dependency>
+			<groupId>org.apache.solr</groupId>
+			<artifactId>solr-solrj</artifactId>
+			<version>5.1.0</version>
+		</dependency>
+		
+		<!-- Reading CSV files -->
+		<dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>3.4</version>
+		</dependency>
 
 		<!-- Other dependencies -->
 		<dependency>
@@ -154,9 +175,23 @@
 			<artifactId>elasticsearch</artifactId>
 			<version>1.7.0</version>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.4</version>
+		</dependency>
 	</dependencies>
 
 	<build>
+		<!-- Files to include -->
+<!-- 		<resources> -->
+<!-- 			<resource> -->
+<!-- 				<directory>${basedir}/res</directory> -->
+<!-- 			</resource> -->
+<!-- 			<resource> -->
+<!-- 				<directory>src/main/resources</directory> -->
+<!-- 			</resource> -->
+<!-- 		</resources> -->
 		<plugins>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>

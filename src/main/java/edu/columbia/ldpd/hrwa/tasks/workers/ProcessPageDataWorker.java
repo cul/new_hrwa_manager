@@ -42,12 +42,9 @@ public class ProcessPageDataWorker implements Runnable {
 	public static final int NUM_MILLIS_OF_WAIT_TIME_BEFORE_LOGGING_WARNING = 120000; // If we wait for too long, this should be logged so that the user can tweak memory limits.
 	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT =   100000; // 100000 == .1 MB.  Higher numbers will result in higher memory usage for larger files.
 	
-	public static final String ELASTICSEARCH_ARCHIVE_FILE_INDEX = "hrwa_archive_files";
-	public static final String ELASTICSEARCH_ARCHIVE_FILE_TYPE = "archive_file";
-	
 	//private Connection conn;
 	private File archiveFile;
-	private Client elasticsearchClient;
+	private TransportClient elasticsearchClient;
 	
 	public ProcessPageDataWorker(String pathToArchiveFile) {
 		archiveFile = new File(pathToArchiveFile);
@@ -70,7 +67,8 @@ public class ProcessPageDataWorker implements Runnable {
 		//Get a connection for this worker
 		//this.conn = MysqlHelper.getNewDBConnection();
 		System.out.println("Connect at: " + HrwaManager.elasticsearchHostname + ", " + HrwaManager.elasticsearchPort);
-		elasticsearchClient = new TransportClient().addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+		elasticsearchClient = new TransportClient();
+		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
 		
 		try {
 			if( ! hasArchiveFileBeenProcessed(this.archiveFile.getName()) ) {
@@ -155,7 +153,7 @@ public class ProcessPageDataWorker implements Runnable {
 		        .field("processDate", new Date())
 		    .endObject();
 		
-		IndexResponse response = elasticsearchClient.prepareIndex(ELASTICSEARCH_ARCHIVE_FILE_INDEX, ELASTICSEARCH_ARCHIVE_FILE_TYPE, this.archiveFile.getName())
+		IndexResponse response = elasticsearchClient.prepareIndex(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE, this.archiveFile.getName())
 	        .setSource(jsonBuilder)
 	        .execute()
 	        .actionGet();
@@ -163,8 +161,8 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	public boolean hasArchiveFileBeenProcessed(String archiveFileName) throws IOException {
 		try {
-			SearchResponse response = elasticsearchClient.prepareSearch(ELASTICSEARCH_ARCHIVE_FILE_INDEX)
-			        .setTypes(ELASTICSEARCH_ARCHIVE_FILE_TYPE)
+			SearchResponse response = elasticsearchClient.prepareSearch(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX)
+			        .setTypes(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE)
 			        .setQuery(QueryBuilders.termQuery("_id", archiveFileName))
 			        .setFrom(0).setSize(1)
 			        .execute()
@@ -176,13 +174,6 @@ public class ProcessPageDataWorker implements Runnable {
 			}
 			
 			return false;
-			
-	//		CountResponse response = elasticsearchClient.prepareCount(ELASTICSEARCH_ARCHIVE_FILE_INDEX)
-	//				.setQuery(QueryBuilders.termQuery("_id", archiveFileName))
-	//		        .execute()
-	//		        .actionGet();
-	//		return (response.getCount() == 1);
-			
 		} catch (IndexMissingException e) {
 			//If this index hasn't been created yet, then none of the archive files have been processed
 			return false;

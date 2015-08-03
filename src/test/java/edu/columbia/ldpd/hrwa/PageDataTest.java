@@ -4,9 +4,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.Iterator;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
@@ -15,13 +13,11 @@ import org.jwat.warc.WarcReader;
 import org.jwat.warc.WarcReaderFactory;
 import org.jwat.warc.WarcRecord;
 
-import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.MissingArchiveHeaderValueException;
-import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.UnexpectedRecordTypeException;
 import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class PageDataTest {
 
-	@Test @Ignore
+	@Test
     public void extractDataFromArcFile() throws Exception {
     	
     	//ARC File
@@ -54,7 +50,7 @@ public class PageDataTest {
 		}
     }
     
-    @Test @Ignore
+    @Test
     public void extractDataFromWarcFile() throws Exception {
     	
 		WarcReader warcReader = WarcReaderFactory.getReader(this.getClass().getResourceAsStream("/ARCHIVEIT-1068-QUARTERLY-20748-20131004123919268-00808-wbgrp-crawl066.us.archive.org-6444.warc.gz"));
@@ -87,7 +83,7 @@ public class PageDataTest {
     }
     
     @Test
-    public void serializePageDataToJson() {
+    public void serializePageDataToElasticsearchJson() {
     	PageData pageData = new PageData();
     	
     	pageData.originalUrl = "http://www.example.com";

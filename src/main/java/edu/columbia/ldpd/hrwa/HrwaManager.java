@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import edu.columbia.ldpd.hrwa.tasks.AbstractTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessPageDataTask;
+import edu.columbia.ldpd.hrwa.tasks.ProcessSiteDataTask;
 
 public class HrwaManager {
 
@@ -25,7 +26,17 @@ public class HrwaManager {
 	public static final long APP_START_TIME_IN_MILLIS = System.currentTimeMillis();
 	public static final long MAX_AVAILABLE_MEMORY_IN_BYTES = Runtime.getRuntime().maxMemory();
 	
-	public static Logger logger = LoggerFactory.getLogger(HrwaManager.class);
+	public static final String ELASTICSEARCH_ARCHIVE_FILE_INDEX = "hrwa_archive_files";
+	public static final String ELASTICSEARCH_ARCHIVE_FILE_TYPE = "archive_file";
+	public static final String ELASTICSEARCH_PAGE_INDEX = "hrwa_pages";
+	public static final String ELASTICSEARCH_PAGE_TYPE = "page";
+	public static final String ELASTICSEARCH_SITE_INDEX = "hrwa_sites";
+	public static final String ELASTICSEARCH_SITE_TYPE = "site";
+	
+	public static final String MARC_DOWNLOAD_DIR = "temp/marcxml-download";
+	public static final String HRWA_965_MARKER = "965hrportal";
+	
+	public static final Logger logger = LoggerFactory.getLogger(HrwaManager.class);
 
 	// Options from command line
 	public static String elasticsearchHostname;
@@ -38,6 +49,8 @@ public class HrwaManager {
 	public static String sitesSolrUrl;
 	public static String pagesSolrUrl;
 	public static String archiveFileDirectory;
+	public static String relatedHostsFile = "";
+	public static boolean reuseLatestDownloadedVoyagerData;
 	public static boolean runTaskProcessSiteData;
 	public static boolean runTaskProcessPageData;
 	public static boolean runTaskSiteDataToSolr;
@@ -61,7 +74,7 @@ public class HrwaManager {
 		ArrayList<AbstractTask> tasksToRun = new ArrayList<AbstractTask>();
 		
 		//Proper task order defined below
-		if(HrwaManager.runTaskProcessSiteData){}
+		if(HrwaManager.runTaskProcessSiteData){ tasksToRun.add(new ProcessSiteDataTask()); }
 		if(HrwaManager.runTaskProcessPageData){ tasksToRun.add(new ProcessPageDataTask()); }
 		if(HrwaManager.runTaskPageDataToSolr){}
 		if(HrwaManager.runTaskPageDataToSolr){}
@@ -93,6 +106,10 @@ public class HrwaManager {
 				"Solr url for the pages core.");
 		options.addOption("archive_file_directory", true,
 				"Directory where ARC/WARC files live.");
+		options.addOption("related_hosts_file", true,
+				"CSV file that contains a hosts-to-related hosts mapping.");
+		options.addOption("reuse_latest_downloaded_marc_data", false,
+				"Reuse latest copy of downloaded marc data rather than downloading the latest version.");
 		// Task-related options
 		options.addOption("run_task_process_site_data", false,
 				"Process site data from Voyager (and related hosts file) and save it to the datastore.");
@@ -128,6 +145,8 @@ public class HrwaManager {
 				HrwaManager.sitesSolrUrl = cmdLine.getOptionValue("sites_solr_url");
 				HrwaManager.pagesSolrUrl = cmdLine.getOptionValue("pages_solr_url");
 				HrwaManager.archiveFileDirectory = cmdLine.getOptionValue("archive_file_directory");
+				HrwaManager.relatedHostsFile = cmdLine.getOptionValue("related_hosts_file");
+				HrwaManager.reuseLatestDownloadedVoyagerData = cmdLine.hasOption("reuse_latest_downloaded_marc_data");
 				HrwaManager.runTaskProcessSiteData = cmdLine.hasOption("run_task_process_site_data");
 				HrwaManager.runTaskProcessPageData = cmdLine.hasOption("run_task_process_page_data");
 				HrwaManager.runTaskSiteDataToSolr = cmdLine.hasOption("run_task_site_data_to_solr");

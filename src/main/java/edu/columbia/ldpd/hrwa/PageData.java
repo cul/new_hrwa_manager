@@ -28,9 +28,6 @@ import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class PageData {
 	
-	public static final String ELASTICSEARCH_INDEX = "hrwa_pages";
-	public static final String ELASTICSEARCH_TYPE = "page";
-	
 	// Archive File Fields
 	public String 		originalUrl; //Original url of this crawled record.
 	public String 		archiveFileName; // Name of the archive file (warc/arc) that this record came from.
@@ -181,7 +178,7 @@ public class PageData {
 	}
 	
 	public void sendToElasticsearch(Client client) throws ElasticsearchException, IOException {
-		IndexResponse response = client.prepareIndex(ELASTICSEARCH_INDEX, ELASTICSEARCH_TYPE, this.getUniqueIdForRecord())
+		IndexResponse response = client.prepareIndex(HrwaManager.ELASTICSEARCH_PAGE_INDEX, HrwaManager.ELASTICSEARCH_PAGE_TYPE, this.getUniqueIdForRecord())
 	        .setSource(this.toElasticsearchJsonBuilder())
 	        .execute()
 	        .actionGet();

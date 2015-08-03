@@ -2,6 +2,7 @@
 /src/test/resources/*.warc
 /src/test/resources/*.arc
 /logs
+/temp
 
 # Ignore temp files
 *~
