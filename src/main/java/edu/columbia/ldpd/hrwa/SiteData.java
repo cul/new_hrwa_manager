@@ -44,6 +44,8 @@ public class SiteData {
 	public String summary = null;
 	public String bibId = null;
 	
+	public ArrayList<String> validationErrors = new ArrayList<String>(); //Populated with validation error strings when the isValid() method is called 
+	
 	public SiteData() {
 		
 	}
@@ -229,9 +231,30 @@ public class SiteData {
 		}
 	}
 	
-	public void validate() {
-		//TODO: Validate data
-		//TODO: Return arraylist of errors
+	/**
+	 * Perform validation and return true if valid.
+	 */
+	public boolean isValid() {
+		
+		if(bibId == null) { validationErrors.add("Missing bibId."); }
+		
+		if(originalUrl.size() == 0) { validationErrors.add("Missing originalUrl."); }
+		if(hostStrings.size() == 0) { validationErrors.add("Missing hostString (derived from originalUrl)."); }
+		if(organizationType == null) { validationErrors.add("Missing organizationType."); }
+		if(subject.size() == 0) { validationErrors.add("Missing subject."); }
+		if(geographicFocus.size() == 0) { validationErrors.add("Missing geographicFocus."); }
+		if(organizationBasedIn == null) { validationErrors.add("Missing organizationBasedIn."); }
+		if(language.size() == 0) { validationErrors.add("Missing language."); }
+		if(title == null) { validationErrors.add("Missing title."); }
+		if(alternativeTitle.size() == 0) { validationErrors.add("Missing alternativeTitle."); }
+		if(creatorName.size() == 0) { validationErrors.add("Missing creatorName."); }
+		if(summary == null) { validationErrors.add("Missing summary."); }
+		
+		return validationErrors.size() == 0;
+	}
+	
+	public ArrayList<String> getValidationErrors() {
+		return this.validationErrors;
 	}
 	
 	public void sendToSolr() {

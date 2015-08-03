@@ -93,7 +93,33 @@ public class SiteDataTest {
 		
 		assertEquals("7832247", siteData.bibId);
 		
+		assertTrue(siteData.isValid());
     }
+	
+	@Test
+	public void siteDataValidation() {
+		SiteData siteData = new SiteData();
+		assertTrue( siteData.isValid() == false);
+		
+		ArrayList<String> expectedValidationErrors = new ArrayList<String>();
+		expectedValidationErrors.add("Missing bibId.");
+		expectedValidationErrors.add("Missing originalUrl.");
+		expectedValidationErrors.add("Missing hostString (derived from originalUrl).");
+		expectedValidationErrors.add("Missing organizationType.");
+		expectedValidationErrors.add("Missing subject.");
+		expectedValidationErrors.add("Missing geographicFocus.");
+		expectedValidationErrors.add("Missing organizationBasedIn.");
+		expectedValidationErrors.add("Missing language.");
+		expectedValidationErrors.add("Missing title.");
+		expectedValidationErrors.add("Missing alternativeTitle.");
+		expectedValidationErrors.add("Missing creatorName.");
+		expectedValidationErrors.add("Missing summary.");
+		
+		ArrayList<String> validationErrors = siteData.getValidationErrors();
+		Collections.sort(expectedValidationErrors); //Sort so we don't have to worry about message order
+		Collections.sort(validationErrors); //Sort so we don't have to worry about message order
+		assertEquals(expectedValidationErrors, validationErrors);
+	}
 	
     
     
