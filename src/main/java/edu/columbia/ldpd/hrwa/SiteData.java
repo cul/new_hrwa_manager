@@ -35,7 +35,7 @@ public class SiteData {
 	public ArrayList<String> originalUrl = new ArrayList<String>();
 	public ArrayList<String> archivedUrl = new ArrayList<String>();
 	public String organizationType = null;
-	public ArrayList<String> subject = new ArrayList<String>();
+	public HashSet<String> subject = new HashSet<String>(); //HashSet to avoid possible known duplicate values from MARC
 	public ArrayList<String> geographicFocus = new ArrayList<String>();
 	public String organizationBasedIn = null;
 	public ArrayList<String> language = new ArrayList<String>();

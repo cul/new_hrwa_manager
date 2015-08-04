@@ -146,7 +146,7 @@ public class MARCFetcher {
                     System.err.println("Could not transform xml: " + e.toString());
                 }
             }
-
+            client.close();
         } catch (JaferException e){
             if (e.hasDiagnostic()){
               System.err.println(e.getDiagnostic().toString());

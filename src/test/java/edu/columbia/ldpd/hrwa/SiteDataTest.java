@@ -55,7 +55,7 @@ public class SiteDataTest {
 		assertEquals("Non-governmental organizations", siteData.organizationType);
 		
 		//subject
-		ArrayList<String> expectedSubject = new ArrayList<String>();
+		HashSet<String> expectedSubject = new HashSet<String>();
 		expectedSubject.add("Kwangju Uprising, Kwangju-si, Korea, 1980");
 		expectedSubject.add("Civil rights movements");
 		expectedSubject.add("Human rights");

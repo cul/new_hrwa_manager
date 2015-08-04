@@ -1,6 +1,8 @@
 package edu.columbia.ldpd.hrwa.tasks;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,10 +14,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
+import edu.columbia.ldpd.hrwa.SiteData;
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
-import edu.columbia.ldpd.hrwa.tasks.workers.ProcessSiteDataWorker;
 import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 import edu.columbia.ldpd.marc.z3950.MARCFetcher;
 
@@ -44,7 +49,8 @@ public class ProcessSiteDataTask extends AbstractTask {
 			
 			// Perform download
 			System.out.println("Fetching new MARC records with 965 marker: " + HrwaManager.HRWA_965_MARKER);
-			new MARCFetcher(new File(HrwaManager.MARC_DOWNLOAD_DIR)).fetch(1, 9000, HrwaManager.HRWA_965_MARKER);
+			MARCFetcher marcFetcher = new MARCFetcher(new File(HrwaManager.MARC_DOWNLOAD_DIR));
+			marcFetcher.fetch(1, 9000, HrwaManager.HRWA_965_MARKER);
 		}
 		
 		// Collect list of marcXmlFiles in File array   
@@ -55,29 +61,55 @@ public class ProcessSiteDataTask extends AbstractTask {
 		    }
 		});
 		int numberOfFilesToProcess = marcXmlFiles.length;
-		
 		System.out.println("Found " + numberOfFilesToProcess + " files.");
 		
-		//For each site, queue up a worker
-		ThreadPoolExecutor executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(HrwaManager.maxNumberOfThreads);
+		ArrayList<SiteData> siteDataRecords = new ArrayList<SiteData>(); 
+		
+		//Process records
+		int counter = 1;
 		for(File marcXmlFile : marcXmlFiles) {
-			Runnable worker = new ProcessSiteDataWorker(marcXmlFile.getAbsolutePath());
-			executor.execute(worker);
+			try {
+				FileInputStream fis = new FileInputStream(marcXmlFile);
+				SiteData siteData = new SiteData(fis);
+				fis.close();
+				siteDataRecords.add(siteData);
+			} catch (FileNotFoundException e) {
+				HrwaManager.logger.error(
+					"Could not find file: " + marcXmlFile.getAbsolutePath() + "\n" +
+					"Message: " + e.getMessage()
+				);
+			} catch (IOException e) {
+				HrwaManager.logger.error(
+					"IOException encountered while processing file: " + marcXmlFile.getAbsolutePath() + "\n" +
+					"Message: " + e.getMessage()
+				);
+			}
+			System.out.println("Processed " + counter + " of " + numberOfFilesToProcess + " archive files.");
+			counter++;
 		}
-        executor.shutdown();
-        
-        while (!executor.isTerminated()) {
-        	System.out.println(
-        		"Processed " + executor.getCompletedTaskCount() + " of " + numberOfFilesToProcess + " archive files." + "\n" +
-        		HrwaManager.getCurrentAppMemoryUsageMessage()
-        	);
-        	try { Thread.sleep(STATUS_POLLING_INTERVAL_IN_MILLIS); } catch (InterruptedException e) { e.printStackTrace(); }
-        }
-        
-        System.out.println(
-    		"Processed " + numberOfFilesToProcess + " of " + numberOfFilesToProcess + " archive files." + "\n" +
-    		HrwaManager.getCurrentAppMemoryUsageMessage()
-    	);
+		
+		//Validate records
+		boolean foundAtLeastOneError = false;
+		ArrayList<String> errors = new ArrayList<String>(); 
+		for(SiteData siteDataRecord : siteDataRecords) {
+			if( ! siteDataRecord.isValid() ) {
+				foundAtLeastOneError = true;
+				errors.add("Could not update site record with bib id: " + siteDataRecord.bibId + " due to the following error(s): " + StringUtils.join(siteDataRecord.getValidationErrors()));
+			}
+		}
+		
+		if(foundAtLeastOneError) {
+			HrwaManager.logger.error("One or more errors were found during " + this.getClass().getName() + " run. These must be fixed before the process can continue:\n----------\n" + StringUtils.join(errors, "\n") + "\n----------\n\nRecords were NOT updated.");
+			
+		} else {
+			//No errors found!  Let's save these records.
+			
+			TransportClient elasticsearchClient = new TransportClient();
+			elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+			
+			//Be sure to close the connection when we're done
+			elasticsearchClient.close();
+		}
         
         System.out.println("Done.");
 	}
