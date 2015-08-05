@@ -153,7 +153,7 @@ public class ProcessPageDataWorker implements Runnable {
 		        .field("processDate", new Date())
 		    .endObject();
 		
-		IndexResponse response = elasticsearchClient.prepareIndex(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE, this.archiveFile.getName())
+		IndexResponse response = elasticsearchClient.prepareIndex(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME, this.archiveFile.getName())
 	        .setSource(jsonBuilder)
 	        .execute()
 	        .actionGet();
@@ -161,8 +161,8 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	public boolean hasArchiveFileBeenProcessed(String archiveFileName) throws IOException {
 		try {
-			SearchResponse response = elasticsearchClient.prepareSearch(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX)
-			        .setTypes(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE)
+			SearchResponse response = elasticsearchClient.prepareSearch(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME)
+			        .setTypes(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME)
 			        .setQuery(QueryBuilders.termQuery("_id", archiveFileName))
 			        .setFrom(0).setSize(1)
 			        .execute()
@@ -191,6 +191,8 @@ public class ProcessPageDataWorker implements Runnable {
 	}
 	
 	public void processPageData(PageData pageData) {
+		if( pageData.shouldBeSkipped() ) { return; }
+		
 		try {
 			pageData.sendToElasticsearch(this.elasticsearchClient);
 		} catch (ElasticsearchException e) {

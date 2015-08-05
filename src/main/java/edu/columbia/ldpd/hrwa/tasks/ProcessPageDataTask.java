@@ -12,6 +12,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.io.FileUtils;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
+import edu.columbia.ldpd.hrwa.PageData;
+import edu.columbia.ldpd.hrwa.SiteData;
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
 import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 
@@ -26,6 +28,9 @@ public class ProcessPageDataTask extends AbstractTask {
 
 	@Override
 	public void taskImpl() {
+		
+		//Create Elasticsearch index if it doesn't already exist
+		PageData.creatElastisearchIndexIfNotExist();
 		
 		//Get all archive files
 		ArrayList<File> archiveFiles = getAlphabeticallySortedListOfArchiveFiles(HrwaManager.archiveFileDirectory);

@@ -1,5 +1,7 @@
 package edu.columbia.ldpd.hrwa;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -11,23 +13,52 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.response.UpdateResponse;
+import org.apache.solr.common.SolrInputDocument;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.Record;
 
 import com.opencsv.CSVReader;
 
+import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 import edu.columbia.ldpd.hrwa.util.MetadataUtils;
+
 
 public class SiteData {
 	
-	private static ConcurrentHashMap<String, String> geographicAreasToFullNames = getGeographicAreasToFullNamesMap();
-	private static ConcurrentHashMap<String, String> countryCodesToFullNamesMap = getCountryCodesToFullNamesMap();
-	private static ConcurrentHashMap<String, String> languageCodesToFullNamesMap = getLanguageCodesToFullNamesMap();
-	private static ConcurrentHashMap<String, ArrayList<String>> hostStringsToRelatedHostStrings = getHostStringsToRelatedHostStrings();
+	private static HashMap<String, String> geographicAreasToFullNames = getGeographicAreasToFullNamesMap();
+	private static HashMap<String, String> countryCodesToFullNamesMap = getCountryCodesToFullNamesMap();
+	private static HashMap<String, String> languageCodesToFullNamesMap = getLanguageCodesToFullNamesMap();
+	private static HashMap<String, ArrayList<String>> hostStringsToRelatedHostStrings = getHostStringsToRelatedHostStrings();
+
+	public String bibId = null;
+	public String marc005LastModified = null;
 	
 	public ArrayList<String> hostStrings = new ArrayList<String>();
 	public HashSet<String> relatedHostStrings = new HashSet<String>();
@@ -43,7 +74,6 @@ public class SiteData {
 	public ArrayList<String> alternativeTitle = new ArrayList<String>();
 	public ArrayList<String> creatorName = new ArrayList<String>();
 	public String summary = null;
-	public String bibId = null;
 	
 	public ArrayList<String> validationErrors = new ArrayList<String>(); //Populated with validation error strings when the isValid() method is called 
 	
@@ -62,6 +92,9 @@ public class SiteData {
 			
 			//bibId --- 001
 			this.bibId = betterMarcRecord.getControlField("001").getData().trim();
+			
+			//marc005LastModified -- 005
+			this.marc005LastModified = betterMarcRecord.getControlField("005").getData().trim();
 			
 			//originalUrl --- 920 40 $u
 			fields = betterMarcRecord.getDataFields("920");
@@ -249,6 +282,7 @@ public class SiteData {
 	public boolean isValid() {
 		
 		if(bibId == null) { validationErrors.add("Missing bibId."); }
+		if(marc005LastModified == null) { validationErrors.add("Missing marc005LastModified."); }
 		if(originalUrl.size() == 0) { validationErrors.add("Missing originalUrl."); }
 		if(archivedUrl.size() == 0) { validationErrors.add("Missing archivedUrl."); }
 		if(hostStrings.size() == 0) { validationErrors.add("Missing hostString (derived from originalUrl)."); }
@@ -265,22 +299,40 @@ public class SiteData {
 		return this.validationErrors;
 	}
 	
-	public void sendToSolr() {
-//		String urlString = "http://localhost:8983/solr/techproducts";
-//		SolrClient solr = new HttpSolrClient(urlString);
-//		
-//		SolrInputDocument document = new SolrInputDocument();
-//		document.addField("id", "552199");
-//		document.addField("name", "Gouda cheese wheel");
-//		document.addField("price", "49.99");
-//		UpdateResponse response = solr.add(document);
-//		 
-//		// Commit changes
-//		solr.commit();
+	public void sendToSolr(SolrClient solrClient) {
+		
+		SolrInputDocument document = new SolrInputDocument();
+		//id == via copyfield
+		document.addField("bib_key", this.bibId);
+		document.addField("title", this.title);
+		document.addField("marc_005_last_modified", this.marc005LastModified);
+		
+		document.addField("title__sort", this.title);
+		document.addField("alternate_title", this.alternativeTitle);
+		document.addField("creator_name", this.creatorName);
+		document.addField("organization_type", this.organizationType);
+		document.addField("organization_based_in", this.organizationBasedIn);
+		document.addField("geographic_focus", this.geographicFocus);
+		document.addField("subject", this.subject);
+		document.addField("summary", this.summary);
+		document.addField("language", this.language);
+		document.addField("original_urls", this.originalUrl);
+		document.addField("archived_urls", this.archivedUrl);
+		
+		
+		//document.addField("geographic_focus__facet", this.geographicFocus);
+		
+
+		try {
+			UpdateResponse response = solrClient.add(document);
+		} catch (SolrServerException | IOException e) {
+			HrwaManager.logger.error("Exception encountered while sending " + this.getClass().getName() + " to solr.  bibId : " + this.bibId + ". Message: " + e.getMessage());
+		}
+		
 	}
 	
-	public static ConcurrentHashMap<String,String> getLanguageCodesToFullNamesMap() {
-		ConcurrentHashMap<String,String> languageCodesToFullNames = new ConcurrentHashMap<String,String>();
+	public static HashMap<String,String> getLanguageCodesToFullNamesMap() {
+		HashMap<String,String> languageCodesToFullNames = new HashMap<String,String>();
 		
 		languageCodesToFullNames.put("aar", "Afar");
 		languageCodesToFullNames.put("abk", "Abkhaz");
@@ -801,8 +853,8 @@ public class SiteData {
 		return languageCodesToFullNames;
 	}
 	
-	public static ConcurrentHashMap<String,String> getCountryCodesToFullNamesMap() {
-		ConcurrentHashMap<String,String> countryCodesToFullNames = new ConcurrentHashMap<String,String>();
+	public static HashMap<String,String> getCountryCodesToFullNamesMap() {
+		HashMap<String,String> countryCodesToFullNames = new HashMap<String,String>();
 		
 		countryCodesToFullNames.put("aa", "Albania");
 		countryCodesToFullNames.put("abc", "Alberta");
@@ -1188,8 +1240,8 @@ public class SiteData {
 		return countryCodesToFullNames;
 	}
 	
-	public static ConcurrentHashMap<String,String> getGeographicAreasToFullNamesMap() {
-		ConcurrentHashMap<String,String> geographicAreasToFullNames = new ConcurrentHashMap<String,String>();
+	public static HashMap<String,String> getGeographicAreasToFullNamesMap() {
+		HashMap<String,String> geographicAreasToFullNames = new HashMap<String,String>();
 		
 		geographicAreasToFullNames.put("a", "Asia");
 		geographicAreasToFullNames.put("a-af", "Afghanistan");
@@ -1780,7 +1832,7 @@ public class SiteData {
 		return geographicAreasToFullNames;
 	}
 	
-	public static ConcurrentHashMap<String, ArrayList<String>> getHostStringsToRelatedHostStrings() {
+	public static HashMap<String, ArrayList<String>> getHostStringsToRelatedHostStrings() {
 		if(new File(HrwaManager.relatedHostsFile).exists()) {
 			try {
 				return relatedHostsFromReader(new FileReader(HrwaManager.relatedHostsFile));
@@ -1790,7 +1842,7 @@ public class SiteData {
 				System.exit(HrwaManager.EXIT_CODE_ERROR);
 			}
 		}
-		return new ConcurrentHashMap<String, ArrayList<String>>();
+		return new HashMap<String, ArrayList<String>>();
 	}
 	
 	/**
@@ -1801,8 +1853,8 @@ public class SiteData {
 		SiteData.hostStringsToRelatedHostStrings = relatedHostsFromReader(new InputStreamReader(relatedHostsCsvInputStream, "UTF-8"));
 	}
 	
-	public static ConcurrentHashMap<String, ArrayList<String>> relatedHostsFromReader(Reader reader) {
-		ConcurrentHashMap<String, ArrayList<String>> hostStringsToRelatedHostStrings = new ConcurrentHashMap<String, ArrayList<String>>();
+	public static HashMap<String, ArrayList<String>> relatedHostsFromReader(Reader reader) {
+		HashMap<String, ArrayList<String>> hostStringsToRelatedHostStrings = new HashMap<String, ArrayList<String>>();
 		
 		CSVReader csvReader;
 		try {
@@ -1831,5 +1883,182 @@ public class SiteData {
 		return hostStringsToRelatedHostStrings;
 	}
 	
+	public static void creatElastisearchIndexIfNotExist() {
+		
+		try {
+			
+			XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
+				.startObject(HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME)
+					.startObject("_source")
+						.field("enabled", true) //keep the source for now.  possibly disable later if not necessary
+					.endObject()
+					.startObject("properties")
+			    		.startObject("bibId")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("marc005LastModified")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("hostStrings")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("relatedHostStrings")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("originalUrl")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("archivedUrl")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("organizationType")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("subject")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("geographicFocus")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("organizationBasedIn")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("language")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("title")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("alternativeTitle")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("creatorName")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("summary")					.field("type", "string").field("store", true).field("index", "analyzed").endObject() //tokenize when indexing
+		    		.endObject()
+			    .endObject()
+			.endObject();
+			
+			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME, 1, 1, HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME, mappingBuilder);
+			
+		} catch (IOException e) {
+			HrwaManager.logger.error("IOException encountered while creating mapping for " + SiteData.class.getName() + ".  Message: " + e.getMessage());
+		}
+	}
+	
+	public XContentBuilder toElasticsearchJsonBuilder() throws IOException {
+		XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
+		
+		if(this.bibId != null) { builder.field("bibId", this.bibId); }
+		if(this.marc005LastModified != null) { builder.field("marc005LastModified", this.marc005LastModified); }
+		if(this.hostStrings.size() != 0) { builder.field("hostStrings", this.hostStrings); }
+		if(this.relatedHostStrings.size() != 0) { builder.field("relatedHostStrings", this.relatedHostStrings); }
+		if(this.originalUrl.size() != 0) { builder.field("originalUrl", this.originalUrl); }
+		if(this.archivedUrl.size() != 0) { builder.field("archivedUrl", this.archivedUrl); }
+		if(this.organizationType != null) { builder.field("organizationType", this.organizationType); }
+		if(this.subject.size() != 0) { builder.field("subject", this.subject); }
+		if(this.geographicFocus.size() != 0) { builder.field("geographicFocus", this.geographicFocus); }
+		if(this.organizationBasedIn != null) { builder.field("organizationBasedIn", this.organizationBasedIn); }
+		if(this.language.size() != 0) { builder.field("language", this.language); }
+		if(this.title != null) { builder.field("title", this.title); }
+		if(this.alternativeTitle.size() != 0) { builder.field("alternativeTitle", this.alternativeTitle); }
+		if(this.creatorName.size() != 0) { builder.field("creatorName", this.creatorName); }
+		if(this.summary != null) { builder.field("summary", this.summary); }
+		
+		builder.endObject();
+		return builder;
+	}
+	
+	public void sendToElasticsearch(Client client) throws ElasticsearchException, IOException {
+		IndexResponse response = client.prepareIndex(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME, HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME, this.bibId)
+	        .setSource(this.toElasticsearchJsonBuilder())
+	        .execute()
+	        .actionGet();
+	}
+	
+	public static ArrayList<SiteData> getAllRecords() {
+		TransportClient elasticsearchClient = new TransportClient();
+		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+		
+		ArrayList<SiteData> siteDataRecords = new ArrayList<SiteData>();
+
+		SearchResponse scrollResp = elasticsearchClient.prepareSearch(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME)
+			.setTypes(HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME)
+	        .setSearchType(SearchType.SCAN)
+	        .setScroll(new TimeValue(60_000)) //60 seconds should be enough time to process EACH scroll batch
+	        .setSize(50).execute().actionGet(); //50 hits per shard will be returned for each scroll
+		//Scroll until no hits are returned
+		while (true) {
+		    for (SearchHit hit : scrollResp.getHits().getHits()) {
+		        siteDataRecords.add(getSiteDataFromElasticsearchHit(hit));
+		    }
+		    scrollResp = elasticsearchClient.prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(600000)).execute().actionGet();
+		    //Break condition: No hits are returned
+		    if (scrollResp.getHits().getHits().length == 0) {
+		        break;
+		    }
+		}
+		
+		//Be sure to close the connection when we're done
+		elasticsearchClient.close();
+		
+		return siteDataRecords;
+	}
+	
+	public static SiteData getSiteDataFromElasticsearchHit(SearchHit hit) {
+		SiteData siteData = new SiteData();
+		
+		Map<String, Object> sourceAsMap = hit.sourceAsMap();
+		
+		//bibId
+		if(sourceAsMap.containsKey("bibId")) {
+			siteData.bibId = (String)sourceAsMap.get("bibId");
+		}
+		
+		//marc005LastModified
+		if(sourceAsMap.containsKey("marc005LastModified")) {
+			siteData.marc005LastModified = (String)sourceAsMap.get("marc005LastModified");
+		}
+
+		//hostString
+		if(sourceAsMap.containsKey("hostStrings")) {
+			siteData.hostStrings.addAll((ArrayList<String>)sourceAsMap.get("hostStrings"));
+		}
+		
+		//relatedHostStrings
+		if(sourceAsMap.containsKey("relatedHostStrings")) {
+			siteData.relatedHostStrings.addAll((ArrayList<String>)sourceAsMap.get("relatedHostStrings"));
+		}
+		
+		//originalUrl
+		if(sourceAsMap.containsKey("originalUrl")) {
+			siteData.originalUrl.addAll((ArrayList<String>)sourceAsMap.get("originalUrl"));
+		}
+		
+		//archivedUrl
+		if(sourceAsMap.containsKey("archivedUrl")) {
+			siteData.archivedUrl.addAll((ArrayList<String>)sourceAsMap.get("archivedUrl"));
+		}
+		
+		//organizationType
+		if(sourceAsMap.containsKey("organizationType")) {
+			siteData.organizationType = (String)sourceAsMap.get("organizationType");
+		}
+		
+		//subject
+		if(sourceAsMap.containsKey("subject")) {
+			siteData.subject.addAll((ArrayList<String>)sourceAsMap.get("subject"));
+		}
+		
+		//geographicFocus
+		if(sourceAsMap.containsKey("geographicFocus")) {
+			siteData.geographicFocus.addAll((ArrayList<String>)sourceAsMap.get("geographicFocus"));
+		}
+
+		//organizationBasedIn
+		if(sourceAsMap.containsKey("organizationBasedIn")) {
+			siteData.organizationBasedIn = (String)sourceAsMap.get("organizationBasedIn");
+		}
+		
+		//expectedLanguage
+		if(sourceAsMap.containsKey("language")) {
+			siteData.language.addAll((ArrayList<String>)sourceAsMap.get("language"));
+		}
+		
+		//title
+		if(sourceAsMap.containsKey("title")) {
+			siteData.title = (String)sourceAsMap.get("title");
+		}
+		
+		//alternateTitle
+		if(sourceAsMap.containsKey("alternativeTitle")) {
+			siteData.alternativeTitle.addAll((ArrayList<String>)sourceAsMap.get("alternativeTitle"));
+		}
+		
+		//creatorName
+		if(sourceAsMap.containsKey("creatorName")) {
+			siteData.creatorName.addAll((ArrayList<String>)sourceAsMap.get("creatorName"));
+		}
+		
+		//summary
+		if(sourceAsMap.containsKey("summary")) {
+			siteData.summary = (String)sourceAsMap.get("summary");
+		}
+		
+		return siteData;
+	}
 
 }

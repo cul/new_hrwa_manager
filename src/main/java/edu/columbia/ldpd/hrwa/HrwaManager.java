@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import edu.columbia.ldpd.hrwa.tasks.AbstractTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessPageDataTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessSiteDataTask;
+import edu.columbia.ldpd.hrwa.tasks.SiteDataToSolrTask;
 
 public class HrwaManager {
 
@@ -26,12 +27,12 @@ public class HrwaManager {
 	public static final long APP_START_TIME_IN_MILLIS = System.currentTimeMillis();
 	public static final long MAX_AVAILABLE_MEMORY_IN_BYTES = Runtime.getRuntime().maxMemory();
 	
-	public static final String ELASTICSEARCH_ARCHIVE_FILE_INDEX = "hrwa_archive_files";
-	public static final String ELASTICSEARCH_ARCHIVE_FILE_TYPE = "archive_file";
-	public static final String ELASTICSEARCH_PAGE_INDEX = "hrwa_pages";
-	public static final String ELASTICSEARCH_PAGE_TYPE = "page";
-	public static final String ELASTICSEARCH_SITE_INDEX = "hrwa_sites";
-	public static final String ELASTICSEARCH_SITE_TYPE = "site";
+	public static final String ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME = "hrwa_archive_files";
+	public static final String ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME = "archive_file";
+	public static final String ELASTICSEARCH_PAGE_INDEX_NAME = "hrwa_pages";
+	public static final String ELASTICSEARCH_PAGE_TYPE_NAME = "page";
+	public static final String ELASTICSEARCH_SITE_INDEX_NAME = "hrwa_sites";
+	public static final String ELASTICSEARCH_SITE_TYPE_NAME = "site";
 	
 	public static final String MARC_DOWNLOAD_DIR = "temp/marcxml-download";
 	public static final String HRWA_965_MARKER = "965hrportal";
@@ -76,7 +77,7 @@ public class HrwaManager {
 		//Proper task order defined below
 		if(HrwaManager.runTaskProcessSiteData){ tasksToRun.add(new ProcessSiteDataTask()); }
 		if(HrwaManager.runTaskProcessPageData){ tasksToRun.add(new ProcessPageDataTask()); }
-		if(HrwaManager.runTaskPageDataToSolr){}
+		if(HrwaManager.runTaskSiteDataToSolr){ tasksToRun.add(new SiteDataToSolrTask()); }
 		if(HrwaManager.runTaskPageDataToSolr){}
 		
 		for(AbstractTask task : tasksToRun) {

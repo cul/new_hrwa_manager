@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
@@ -26,14 +27,15 @@ import edu.columbia.ldpd.marc.z3950.MARCFetcher;
 
 public class ProcessSiteDataTask extends AbstractTask {
 	
-	public static final int STATUS_POLLING_INTERVAL_IN_MILLIS = 10000; // How frequently we get status messages about progress during processing.
-	
 	public ProcessSiteDataTask() {
 		
 	}
 
 	@Override
 	public void taskImpl() {
+		
+		//Create Elasticsearch index if it doesn't already exist
+		SiteData.creatElastisearchIndexIfNotExist();
 		
 		//Get site data from Voyager MARC records
 		
@@ -100,12 +102,23 @@ public class ProcessSiteDataTask extends AbstractTask {
 		
 		if(foundAtLeastOneError) {
 			HrwaManager.logger.error("One or more errors were found during " + this.getClass().getName() + " run. These must be fixed before the process can continue:\n----------\n" + StringUtils.join(errors, "\n") + "\n----------\n\nRecords were NOT updated.");
-			
 		} else {
 			//No errors found!  Let's save these records.
 			
 			TransportClient elasticsearchClient = new TransportClient();
 			elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+			
+			//TODO: Save to elasticsearch
+			for(SiteData siteDataRecord : siteDataRecords) {
+				try {
+					siteDataRecord.sendToElasticsearch(elasticsearchClient);
+				} catch (ElasticsearchException e) {
+					HrwaManager.logger.error("ElasticsearchException encountered while sending SiteData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
+				} catch (IOException e) {
+					HrwaManager.logger.error("IOException encountered while sending PageData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
+				}
+				
+			}
 			
 			//Be sure to close the connection when we're done
 			elasticsearchClient.close();
@@ -118,7 +131,7 @@ public class ProcessSiteDataTask extends AbstractTask {
 		try {
 			FileUtils.deleteDirectory(new File(HrwaManager.MARC_DOWNLOAD_DIR));
 		} catch (IOException e) {
-			System.out.println("Could not delete all downloaded voyager content for some reason.");
+			System.out.println("Could not delete all downloaded voyager content for some reason. Tried to delete directory: " + HrwaManager.MARC_DOWNLOAD_DIR);
 			e.printStackTrace();
 		}
 	}

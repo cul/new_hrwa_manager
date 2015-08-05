@@ -97,6 +97,7 @@ public class SiteDataTest {
 				+ "and to work towards peace and human rights throughout the world.", siteData.summary);
 		
 		assertEquals("7832247", siteData.bibId);
+		assertEquals("20120418210020.0", siteData.marc005LastModified);
 		
 		assertTrue(siteData.isValid());
     }
@@ -108,6 +109,7 @@ public class SiteDataTest {
 		
 		ArrayList<String> expectedValidationErrors = new ArrayList<String>();
 		expectedValidationErrors.add("Missing bibId.");
+		expectedValidationErrors.add("Missing marc005LastModified.");
 		expectedValidationErrors.add("Missing originalUrl.");
 		expectedValidationErrors.add("Missing archivedUrl.");
 		expectedValidationErrors.add("Missing hostString (derived from originalUrl).");

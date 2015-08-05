@@ -24,6 +24,7 @@ import org.jwat.common.Payload;
 import org.jwat.warc.WarcRecord;
 
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
+import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class PageData {
@@ -158,6 +159,36 @@ public class PageData {
 		extractMimeTypeAndFulltextfromPayload(payload);
 	}
 	
+public static void creatElastisearchIndexIfNotExist() {
+		try {
+			
+			XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
+				.startObject(HrwaManager.ELASTICSEARCH_PAGE_TYPE_NAME)
+					.startObject("_source")
+						.field("enabled", true) //keep the source for now.  possibly disable later if not necessary
+					.endObject()
+					.startObject("properties")
+			    		.startObject("originalUrl")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("hostString")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("archiveFileName")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("archiveFileOffset")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("contentLength")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("crawlDate")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("fulltext")			.field("type", "string").field("store", true).field("index", "no").endObject() //do not index at all (only store)
+						.startObject("mimetypeFromHeader")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("detectedMimetype")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+		    		.endObject()
+			    .endObject()
+			.endObject();
+			
+			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_PAGE_INDEX_NAME, 3, 1, HrwaManager.ELASTICSEARCH_PAGE_TYPE_NAME, mappingBuilder);
+			
+		} catch (IOException e) {
+			HrwaManager.logger.error("IOException encountered while creating mapping for " + PageData.class.getName() + ".  Message: " + e.getMessage());
+		}
+	}
+
+	
 	public XContentBuilder toElasticsearchJsonBuilder() throws IOException {
 		
 		XContentBuilder builder = XContentFactory.jsonBuilder()
@@ -178,7 +209,7 @@ public class PageData {
 	}
 	
 	public void sendToElasticsearch(Client client) throws ElasticsearchException, IOException {
-		IndexResponse response = client.prepareIndex(HrwaManager.ELASTICSEARCH_PAGE_INDEX, HrwaManager.ELASTICSEARCH_PAGE_TYPE, this.getUniqueIdForRecord())
+		IndexResponse response = client.prepareIndex(HrwaManager.ELASTICSEARCH_PAGE_INDEX_NAME, HrwaManager.ELASTICSEARCH_PAGE_TYPE_NAME, this.getUniqueIdForRecord())
 	        .setSource(this.toElasticsearchJsonBuilder())
 	        .execute()
 	        .actionGet();
