@@ -156,7 +156,7 @@ public class SiteData {
 					//If $a and $x are the same (or if $a is present and $x is blank), just use $a
 					result = BetterMarcRecord.removeCommonTrailingCharacters(subfieldA).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space;
 				} else {
-					//Otherwise combine $a and $x
+					//Otherwise combine $a and $x (with " -- ") as a separator
 					result = BetterMarcRecord.removeCommonTrailingCharacters(subfieldA + " -- " + subfieldX).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space
 				}
 				
