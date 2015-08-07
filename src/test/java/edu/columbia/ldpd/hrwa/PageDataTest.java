@@ -36,6 +36,7 @@ public class PageDataTest {
 			if( pageData.shouldBeSkipped() ) { continue; }
 			
 			assertTrue(pageData.originalUrl != null);
+			assertTrue(pageData.originalUrlWithoutProtocol != null);
 			assertTrue(pageData.hostString != null);
 			assertTrue(pageData.archiveFileName != null);
 			assertTrue(pageData.archiveFileOffset != 0);
@@ -68,6 +69,7 @@ public class PageDataTest {
 			if( pageData.shouldBeSkipped() ) { continue; }
 			
 			assertTrue(pageData.originalUrl != null);
+			assertTrue(pageData.originalUrlWithoutProtocol != null);
 			assertTrue(pageData.hostString != null);
 			assertTrue(pageData.archiveFileName != null);
 			assertTrue(pageData.archiveFileOffset != 0);
@@ -87,6 +89,7 @@ public class PageDataTest {
     	PageData pageData = new PageData();
     	
     	pageData.originalUrl = "http://www.example.com";
+    	pageData.originalUrlWithoutProtocol = MetadataUtils.removeProtocolFromUrlString(pageData.originalUrl);
     	pageData.hostString = MetadataUtils.extractHostString(pageData.originalUrl);
 		pageData.archiveFileName = "some-archive-file-12345.warc.gz";
 		pageData.archiveFileOffset = 42;
@@ -106,6 +109,7 @@ public class PageDataTest {
 		
 		String expectedJson = "{" +
 			"\"originalUrl\":\"http://www.example.com\"," +
+			"\"originalUrlWithoutProtocol\":\"www.example.com\"," +
 			"\"hostString\":\"example.com\"," +
 			"\"archiveFileName\":\"some-archive-file-12345.warc.gz\"," +
 			"\"archiveFileOffset\":42," +

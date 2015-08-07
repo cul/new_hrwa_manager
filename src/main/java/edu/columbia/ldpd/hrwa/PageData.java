@@ -42,7 +42,8 @@ public class PageData {
 	public String		fulltext; // Full text extracted from record content.
 	
 	//Derived Fields
-	public String 		hostString; //Truncated url, only including hostname and removing www, www1, www2, etc. if present.
+	public String 		originalUrlWithoutProtocol; // Version of the original URL without the protocol portion 
+	public String 		hostString; //Truncated url, only including hostname (without path), removing www, www1, www2, etc. if present.
 	
 	//Force skip
 	public boolean		forceSkipThisRecord = false; // If this flag is set to true, then this record will always appear as skippable
@@ -72,7 +73,8 @@ public class PageData {
 			forceSkipThisRecord = true;
 			return;
 		} else {
-			this.hostString = MetadataUtils.extractHostString(this.originalUrl); 
+			this.originalUrlWithoutProtocol = MetadataUtils.removeProtocolFromUrlString(this.originalUrl);
+			this.hostString = MetadataUtils.extractHostString(this.originalUrl);
 		}
 		
 		HttpHeader httpHeader = arcRecord.getHttpHeader();
@@ -118,6 +120,7 @@ public class PageData {
 			)
 		{
 			this.originalUrl = warcRecord.getHeader("WARC-Target-URI").value;
+			this.originalUrlWithoutProtocol = MetadataUtils.removeProtocolFromUrlString(this.originalUrl);
 			this.hostString = MetadataUtils.extractHostString(this.originalUrl);
 		} else {
 			forceSkipThisRecord = true;
@@ -149,9 +152,6 @@ public class PageData {
 			return;
 		}
 		
-		// Derive hostString from originalUrl when applicable (only runs if shouldBeSkipped() passes, since we check for the presence of an originalUrl value)
-		this.hostString = MetadataUtils.extractHostString(this.originalUrl);
-		
 		//Handle the payload (i.e. actual crawled resource data)
 		Payload payload = warcRecord.getPayload();
 		this.contentLength = payload.getTotalLength();
@@ -159,7 +159,7 @@ public class PageData {
 		extractMimeTypeAndFulltextfromPayload(payload);
 	}
 	
-public static void creatElastisearchIndexIfNotExist() {
+	public static void creatElastisearchIndexIfNotExist() {
 		try {
 			
 			XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
@@ -168,15 +168,16 @@ public static void creatElastisearchIndexIfNotExist() {
 						.field("enabled", true) //keep the source for now.  possibly disable later if not necessary
 					.endObject()
 					.startObject("properties")
-			    		.startObject("originalUrl")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("hostString")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("archiveFileName")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("archiveFileOffset")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("contentLength")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("crawlDate")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("fulltext")			.field("type", "string").field("store", true).field("index", "no").endObject() //do not index at all (only store)
-						.startObject("mimetypeFromHeader")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("detectedMimetype")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("originalUrl")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("originalUrlWithoutProtocol")	.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("hostString")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("archiveFileName")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("archiveFileOffset")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("contentLength")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("crawlDate")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("fulltext")					.field("type", "string").field("store", true).field("index", "no").endObject() //do not index at all (only store)
+						.startObject("mimetypeFromHeader")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("detectedMimetype")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 		    		.endObject()
 			    .endObject()
 			.endObject();
@@ -194,6 +195,7 @@ public static void creatElastisearchIndexIfNotExist() {
 		XContentBuilder builder = XContentFactory.jsonBuilder()
 		    .startObject()
 		    	.field("originalUrl", this.originalUrl)
+		    	.field("originalUrlWithoutProtocol", this.originalUrlWithoutProtocol)
 				.field("hostString", this.hostString)
 				.field("archiveFileName", this.archiveFileName)
 				.field("archiveFileOffset", this.archiveFileOffset)

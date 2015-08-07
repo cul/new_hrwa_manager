@@ -13,12 +13,13 @@ public class MetadataUtils {
 	public static Pattern wwwVariationPattern = Pattern.compile("\\Awww\\d*\\.");
 
 	/**
-	 * Expexts input of the format http://www.example.com
+	 * Extracts a hostString from a given url String, removing a leading "www", "www1", etc., and also removing the url path.
+	 e.g. "http://www.example.com/abc" or "http://www1.example.com/abc" are converted into "example.com".  "http://test.example.com/abc" is converted into "text.example.com".
 	 * @param url
 	 * @return
 	 */
 	public static String extractHostString(String url) {
-		if( ! url.startsWith("http://") ) { url = "http://" + url; } //This is so that an hoststring (which has no protocol) can also be run through this method 
+		if( ! url.startsWith("http://") && ! url.startsWith("https://") ) { url = "http://" + url; } //This is so that an hoststring (which has no protocol) can also be run through this method 
 		
 		URL uri;
 		try {
@@ -29,6 +30,31 @@ public class MetadataUtils {
 				return null;
 			} else {
 				return uri.getHost().replaceFirst("\\Awww\\d*\\.", "");
+			}
+		} catch (MalformedURLException e) {
+			HrwaManager.logger.error("Unable to parse URL: " + url);
+			return null;
+		}
+    }
+	
+	/**
+	 * Extracts a urlPrefixString from a given url String, removing a leading "www", "www1", etc., but keeping the url path.
+	 e.g. "http://www.example.com/abc" or "http://www1.example.com/abc" are converted into "example.com/abc".  "http://test.example.com/abc" is converted into "text.example.com/abc".
+	 * @param url
+	 * @return
+	 */
+	public static String removeProtocolFromUrlString(String url) {
+		if( ! url.startsWith("http://") && ! url.startsWith("https://") ) { url = "http://" + url; } //This is so that an hoststring (which has no protocol) can also be run through this method 
+		
+		URL uri;
+		try {
+			uri = new URL(url);
+			String host = uri.getHost();
+			if(host == null) {
+				HrwaManager.logger.error("Unable to parse URI: " + url);
+				return null;
+			} else {
+				return uri.getHost() + uri.getPath();
 			}
 		} catch (MalformedURLException e) {
 			HrwaManager.logger.error("Unable to parse URL: " + url);

@@ -55,13 +55,14 @@ public class SiteData {
 	private static HashMap<String, String> geographicAreasToFullNames = getGeographicAreasToFullNamesMap();
 	private static HashMap<String, String> countryCodesToFullNamesMap = getCountryCodesToFullNamesMap();
 	private static HashMap<String, String> languageCodesToFullNamesMap = getLanguageCodesToFullNamesMap();
-	private static HashMap<String, ArrayList<String>> hostStringsToRelatedHostStrings = getHostStringsToRelatedHostStrings();
+	private static HashMap<String, ArrayList<String>> hostStringsToRelatedUrlPrefixStrings = getHostStringsToRelatedUrlPrefixStrings();
 
 	public String bibId = null;
 	public String marc005LastModified = null;
 	
 	public ArrayList<String> hostStrings = new ArrayList<String>();
-	public HashSet<String> relatedHostStrings = new HashSet<String>();
+	public HashSet<String> relatedUrlPrefixStrings = new HashSet<String>();
+	public ArrayList<String> originalUrlWithoutProtocol = new ArrayList<String>();
 	
 	public ArrayList<String> originalUrl = new ArrayList<String>();
 	public ArrayList<String> archivedUrl = new ArrayList<String>();
@@ -104,13 +105,14 @@ public class SiteData {
 				).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space
 				if( ! result.isEmpty() ) {
 					this.originalUrl.add(result);
+					this.originalUrlWithoutProtocol.add(MetadataUtils.removeProtocolFromUrlString(result));
 					String resultAsHostString = MetadataUtils.extractHostString(result);
 					this.hostStrings.add(resultAsHostString);
 					
-					//Set relatedHosts based on hostString
-					if(SiteData.hostStringsToRelatedHostStrings.containsKey(resultAsHostString)) {
-						for(String relatedHostString : hostStringsToRelatedHostStrings.get(resultAsHostString)) {
-							this.relatedHostStrings.add(relatedHostString); 
+					//Set relatedUrlPrefixes based on hostString
+					if(SiteData.hostStringsToRelatedUrlPrefixStrings.containsKey(resultAsHostString)) {
+						for(String relatedUrlPrefixString : hostStringsToRelatedUrlPrefixStrings.get(resultAsHostString)) {
+							this.relatedUrlPrefixStrings.add(relatedUrlPrefixString); 
 						}
 					}
 				}
@@ -284,6 +286,7 @@ public class SiteData {
 		if(bibId == null) { validationErrors.add("Missing bibId."); }
 		if(marc005LastModified == null) { validationErrors.add("Missing marc005LastModified."); }
 		if(originalUrl.size() == 0) { validationErrors.add("Missing originalUrl."); }
+		if(originalUrlWithoutProtocol.size() == 0) { validationErrors.add("Missing originalUrlsWithoutProtocol (derived from originalUrl)."); }
 		if(archivedUrl.size() == 0) { validationErrors.add("Missing archivedUrl."); }
 		if(hostStrings.size() == 0) { validationErrors.add("Missing hostString (derived from originalUrl)."); }
 		if(organizationType == null) { validationErrors.add("Missing organizationType."); }
@@ -1832,10 +1835,10 @@ public class SiteData {
 		return geographicAreasToFullNames;
 	}
 	
-	public static HashMap<String, ArrayList<String>> getHostStringsToRelatedHostStrings() {
+	public static HashMap<String, ArrayList<String>> getHostStringsToRelatedUrlPrefixStrings() {
 		if(new File(HrwaManager.relatedHostsFile).exists()) {
 			try {
-				return relatedHostsFromReader(new FileReader(HrwaManager.relatedHostsFile));
+				return relatedUrlPrefixStringsFromReader(new FileReader(HrwaManager.relatedHostsFile));
 			} catch (FileNotFoundException e) {
 				HrwaManager.logger.error("Unable to find related hosts CSV file at: " + HrwaManager.relatedHostsFile + "\n" + e.getMessage());
 				e.printStackTrace();
@@ -1849,12 +1852,12 @@ public class SiteData {
 	 * This method is only here for unit testing purposes.
 	 * @throws UnsupportedEncodingException 
 	 */
-	public static void overrideRelatedHostsDataFromStreamSource(InputStream relatedHostsCsvInputStream) throws UnsupportedEncodingException {
-		SiteData.hostStringsToRelatedHostStrings = relatedHostsFromReader(new InputStreamReader(relatedHostsCsvInputStream, "UTF-8"));
+	public static void overrideRelatedUrlPrefixDataFromStreamSource(InputStream relatedHostsCsvInputStream) throws UnsupportedEncodingException {
+		SiteData.hostStringsToRelatedUrlPrefixStrings = relatedUrlPrefixStringsFromReader(new InputStreamReader(relatedHostsCsvInputStream, "UTF-8"));
 	}
 	
-	public static HashMap<String, ArrayList<String>> relatedHostsFromReader(Reader reader) {
-		HashMap<String, ArrayList<String>> hostStringsToRelatedHostStrings = new HashMap<String, ArrayList<String>>();
+	public static HashMap<String, ArrayList<String>> relatedUrlPrefixStringsFromReader(Reader reader) {
+		HashMap<String, ArrayList<String>> hostStringsToRelatedUrlPrefixStrings = new HashMap<String, ArrayList<String>>();
 		
 		CSVReader csvReader;
 		try {
@@ -1866,13 +1869,13 @@ public class SiteData {
 		        	continue;
 		        }
 		        
-		        String keyHostString = MetadataUtils.extractHostString(csvRow[0]);
-		        String valueHostString = MetadataUtils.extractHostString(csvRow[1]);
+		        String keyHostString = csvRow[0].trim();
+		        String valueHostString = csvRow[1].trim();
 		        
-		    	if( ! hostStringsToRelatedHostStrings.containsKey(keyHostString) ) {
-		    		hostStringsToRelatedHostStrings.put(keyHostString, new ArrayList<String>());
+		    	if( ! hostStringsToRelatedUrlPrefixStrings.containsKey(keyHostString) ) {
+		    		hostStringsToRelatedUrlPrefixStrings.put(keyHostString, new ArrayList<String>());
 		    	}
-		    	hostStringsToRelatedHostStrings.get(keyHostString).add(valueHostString);
+		    	hostStringsToRelatedUrlPrefixStrings.get(keyHostString).add(valueHostString);
 		     }
 		     csvReader.close();
 		} catch (IOException e) {
@@ -1880,7 +1883,7 @@ public class SiteData {
 			e.printStackTrace();
 			System.exit(HrwaManager.EXIT_CODE_ERROR);
 		}
-		return hostStringsToRelatedHostStrings;
+		return hostStringsToRelatedUrlPrefixStrings;
 	}
 	
 	public static void creatElastisearchIndexIfNotExist() {
@@ -1893,21 +1896,22 @@ public class SiteData {
 						.field("enabled", true) //keep the source for now.  possibly disable later if not necessary
 					.endObject()
 					.startObject("properties")
-			    		.startObject("bibId")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("marc005LastModified")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("hostStrings")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("relatedHostStrings")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("originalUrl")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("archivedUrl")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("organizationType")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("subject")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("geographicFocus")			.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("organizationBasedIn")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("language")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("title")					.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("alternativeTitle")		.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("creatorName")				.field("type", "string").field("store", true).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("summary")					.field("type", "string").field("store", true).field("index", "analyzed").endObject() //tokenize when indexing
+			    		.startObject("bibId")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("marc005LastModified")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("relatedUrlPrefixStrings")		.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("originalUrl")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("originalUrlWithoutProtocol")	.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("hostStrings")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("archivedUrl")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("organizationType")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("subject")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("geographicFocus")				.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("organizationBasedIn")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("language")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("title")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("alternativeTitle")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("creatorName")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("summary")						.field("type", "string").field("store", false).field("index", "analyzed").endObject() //tokenize when indexing
 		    		.endObject()
 			    .endObject()
 			.endObject();
@@ -1925,8 +1929,9 @@ public class SiteData {
 		if(this.bibId != null) { builder.field("bibId", this.bibId); }
 		if(this.marc005LastModified != null) { builder.field("marc005LastModified", this.marc005LastModified); }
 		if(this.hostStrings.size() != 0) { builder.field("hostStrings", this.hostStrings); }
-		if(this.relatedHostStrings.size() != 0) { builder.field("relatedHostStrings", this.relatedHostStrings); }
 		if(this.originalUrl.size() != 0) { builder.field("originalUrl", this.originalUrl); }
+		if(this.originalUrlWithoutProtocol.size() != 0) { builder.field("originalUrlWithoutProtocol", this.originalUrlWithoutProtocol); }
+		if(this.relatedUrlPrefixStrings.size() != 0) { builder.field("relatedUrlPrefixStrings", this.relatedUrlPrefixStrings); }
 		if(this.archivedUrl.size() != 0) { builder.field("archivedUrl", this.archivedUrl); }
 		if(this.organizationType != null) { builder.field("organizationType", this.organizationType); }
 		if(this.subject.size() != 0) { builder.field("subject", this.subject); }
@@ -2000,12 +2005,17 @@ public class SiteData {
 		
 		//relatedHostStrings
 		if(sourceAsMap.containsKey("relatedHostStrings")) {
-			siteData.relatedHostStrings.addAll((ArrayList<String>)sourceAsMap.get("relatedHostStrings"));
+			siteData.relatedUrlPrefixStrings.addAll((ArrayList<String>)sourceAsMap.get("relatedHostStrings"));
 		}
 		
 		//originalUrl
 		if(sourceAsMap.containsKey("originalUrl")) {
 			siteData.originalUrl.addAll((ArrayList<String>)sourceAsMap.get("originalUrl"));
+		}
+		
+		//originalUrlWithoutProtocol
+		if(sourceAsMap.containsKey("originalUrlWithoutProtocol")) {
+			siteData.originalUrlWithoutProtocol.addAll((ArrayList<String>)sourceAsMap.get("originalUrlWithoutProtocol"));
 		}
 		
 		//archivedUrl

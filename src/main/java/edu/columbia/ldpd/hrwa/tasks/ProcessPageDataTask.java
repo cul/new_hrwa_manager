@@ -15,6 +15,7 @@ import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.PageData;
 import edu.columbia.ldpd.hrwa.SiteData;
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
+import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 
 public class ProcessPageDataTask extends AbstractTask {
@@ -56,6 +57,11 @@ public class ProcessPageDataTask extends AbstractTask {
     		"Processed " + numberOfFilesToProcess + " of " + numberOfFilesToProcess + " archive files." + "\n" +
     		HrwaManager.getCurrentAppMemoryUsageMessage()
     	);
+        
+        System.out.println("Flushing Elasticsearch updates...");
+		//Flush elasticsearch changes, otherwise all index changes won't necessarily be up to date in time for the next task to run.
+		ElasticsearchHelper.flushIndexChanges(HrwaManager.ELASTICSEARCH_PAGE_INDEX_NAME);
+		System.out.println("Updates have been flushed.");
         
         System.out.println("Done.");
 	}

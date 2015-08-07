@@ -5,6 +5,8 @@ import java.io.IOException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.flush.FlushRequest;
+import org.elasticsearch.action.admin.indices.flush.FlushResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
@@ -16,6 +18,16 @@ import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.SiteData;
 
 public class ElasticsearchHelper {
+	
+	public static void flushIndexChanges(String indexName) {
+		TransportClient elasticsearchClient = new TransportClient();
+		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+		
+		final FlushResponse res = elasticsearchClient.admin().indices().prepareFlush(indexName).execute().actionGet();
+		
+		//Be sure to close the connection when we're done
+		elasticsearchClient.close();
+	}
 	
 	public static void createElasticsearchIndexIfNotExists(String indexName, int numShards, int numReplicas, String typeName, XContentBuilder mappingBuilderForType) {
 		TransportClient elasticsearchClient = new TransportClient();

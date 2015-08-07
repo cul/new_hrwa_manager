@@ -22,6 +22,7 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.SiteData;
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
+import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 import edu.columbia.ldpd.marc.z3950.MARCFetcher;
 
@@ -108,7 +109,6 @@ public class ProcessSiteDataTask extends AbstractTask {
 			TransportClient elasticsearchClient = new TransportClient();
 			elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
 			
-			//TODO: Save to elasticsearch
 			for(SiteData siteDataRecord : siteDataRecords) {
 				try {
 					siteDataRecord.sendToElasticsearch(elasticsearchClient);
@@ -123,6 +123,11 @@ public class ProcessSiteDataTask extends AbstractTask {
 			//Be sure to close the connection when we're done
 			elasticsearchClient.close();
 		}
+		
+		System.out.println("Flushing Elasticsearch updates...");
+		//Flush elasticsearch changes, otherwise all index changes won't necessarily be up to date in time for the next task to run.
+		ElasticsearchHelper.flushIndexChanges(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME);
+		System.out.println("Updates have been flushed.");
         
         System.out.println("Done.");
 	}

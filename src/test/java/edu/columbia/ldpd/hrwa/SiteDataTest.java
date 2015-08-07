@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -24,9 +25,9 @@ import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 public class SiteDataTest {
 
 	@Test
-    public void extractDataFromMarcXmlFile() throws Exception {
+    public void extractDataFromMarcXmlFile() throws UnsupportedEncodingException {
     	
-		SiteData.overrideRelatedHostsDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
+		SiteData.overrideRelatedUrlPrefixDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
 		
     	//Marc XML File
     	SiteData siteData = new SiteData(this.getClass().getResourceAsStream("/sample-marcxml.xml"));
@@ -49,7 +50,7 @@ public class SiteDataTest {
 		//relatedHostStrings
 		HashSet<String> expectedRelatedHostStrings = new HashSet<String>();
 		expectedRelatedHostStrings.add("hrwa-test-mapping.columbia.edu");
-		assertEquals(expectedRelatedHostStrings, siteData.relatedHostStrings);
+		assertEquals(expectedRelatedHostStrings, siteData.relatedUrlPrefixStrings);
 		
 		//organizationType
 		assertEquals("Non-governmental organizations", siteData.organizationType);
@@ -112,6 +113,7 @@ public class SiteDataTest {
 		expectedValidationErrors.add("Missing marc005LastModified.");
 		expectedValidationErrors.add("Missing originalUrl.");
 		expectedValidationErrors.add("Missing archivedUrl.");
+		expectedValidationErrors.add("Missing originalUrlsWithoutProtocol (derived from originalUrl).");
 		expectedValidationErrors.add("Missing hostString (derived from originalUrl).");
 		expectedValidationErrors.add("Missing organizationType.");
 		expectedValidationErrors.add("Missing subject.");
@@ -128,30 +130,40 @@ public class SiteDataTest {
     
     
     @Test
-    public void serializeSiteDataToElasticsearchJson() {
-    	//SiteData siteData = new SiteData(this.getClass().getResourceAsStream("/sample-marcxml.xml"));
+    public void serializeSiteDataToElasticsearchJson() throws UnsupportedEncodingException {
+    	
+    	SiteData.overrideRelatedUrlPrefixDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
+    	
+    	SiteData siteData = new SiteData(this.getClass().getResourceAsStream("/sample-marcxml.xml"));
 
-//		String generatedJson = null;
-//		try {
-//			generatedJson = siteData.toElasticsearchJsonBuilder().string();
-//		} catch (IOException e) {
-//			System.out.println("Unexpected IOException: " + e.getMessage());
-//			e.printStackTrace();
-//		}
-//		
-//		String expectedJson = "{" +
-//			"\"originalUrl\":\"http://www.example.com\"," +
-//			"\"hostString\":\"example.com\"," +
-//			"\"archiveFileName\":\"some-archive-file-12345.warc.gz\"," +
-//			"\"archiveFileOffset\":42," +
-//			"\"contentLength\":56779," +
-//			"\"crawlDate\":\"20150728\"," +
-//			"\"fulltext\":\"This is the full text.\"," +
-//			"\"mimetypeFromHeader\":\"text/plain\"," +
-//			"\"detectedMimetype\":\"text/plain\"" +
-//		"}";
-//		
-//		assertEquals(expectedJson, generatedJson);
+		String generatedJson = null;
+		try {
+			generatedJson = siteData.toElasticsearchJsonBuilder().string();
+		} catch (IOException e) {
+			System.out.println("Unexpected IOException: " + e.getMessage());
+			e.printStackTrace();
+		}
+		
+		String expectedJson = "{" +
+			"\"bibId\":\"7832247\"," +
+			"\"marc005LastModified\":\"20120418210020.0\"," +
+			"\"hostStrings\":[\"518.org\"]," +
+			"\"originalUrl\":[\"http://www.518.org\"]," +
+			"\"originalUrlWithoutProtocol\":[\"www.518.org\"]," +
+			"\"relatedUrlPrefixStrings\":[\"hrwa-test-mapping.columbia.edu\"]," +
+			"\"archivedUrl\":[\"http://wayback.archive-it.org/1068/*/http://www.518.org\"]," +
+			"\"organizationType\":\"Non-governmental organizations\"," +
+			"\"subject\":[\"Human rights\",\"Kwangju Uprising, Kwangju-si, Korea, 1980\",\"Civil rights movements\"]," +
+			"\"geographicFocus\":[\"Korea (South)\"]," +
+			"\"organizationBasedIn\":\"Korea (South)\"," +
+			"\"language\":[\"Korean\",\"English\"]," +
+			"\"title\":\"5·18 Kinyŏm Chaedan May 18 Memorial Foundation\"," +
+			"\"alternativeTitle\":[\"May 18 Memorial Foundation\"]," +
+			"\"creatorName\":[\"5.18 Kinyŏm Chaedan (Korea)\"]," +
+			"\"summary\":\"The May 18 Memorial Foundation is a non-profit organization established on August 30, 1994 by the surviving victims of the 1980 Gwangju Democratic Uprising, the victims families, and the citizens of Gwangju. The foundation aims to commemorate as well as continue the spirit and struggle and solidarity of the May 18 Uprising; to contribute to the peaceful reunification of Korea; and to work towards peace and human rights throughout the world.\"" +
+		"}";
+		
+		assertEquals(expectedJson, generatedJson);
     }
 
 }
