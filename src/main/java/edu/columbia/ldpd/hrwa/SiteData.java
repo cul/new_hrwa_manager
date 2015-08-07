@@ -11,9 +11,12 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrClient;
@@ -310,7 +313,7 @@ public class SiteData {
 		document.addField("title", this.title);
 		document.addField("marc_005_last_modified", this.marc005LastModified);
 		
-		document.addField("title__sort", this.title);
+		document.addField("title__sort", this.title.toUpperCase());
 		document.addField("alternate_title", this.alternativeTitle);
 		document.addField("creator_name", this.creatorName);
 		document.addField("organization_type", this.organizationType);
@@ -319,13 +322,9 @@ public class SiteData {
 		document.addField("subject", this.subject);
 		document.addField("summary", this.summary);
 		document.addField("language", this.language);
-		document.addField("original_urls", this.originalUrl);
-		document.addField("archived_urls", this.archivedUrl);
+		document.addField("original_urls", new TreeSet<String>(this.originalUrl)); //Using TreeSet to sort list so it's in sync with archivedUrl
+		document.addField("archived_urls", new TreeSet<String>(this.archivedUrl)); //Using TreeSet to sort list so it's in sync with originalUrl
 		
-		
-		//document.addField("geographic_focus__facet", this.geographicFocus);
-		
-
 		try {
 			UpdateResponse response = solrClient.add(document);
 		} catch (SolrServerException | IOException e) {
