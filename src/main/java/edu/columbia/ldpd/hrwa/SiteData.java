@@ -141,7 +141,7 @@ public class SiteData {
 				}
 			}
 			
-			//subject --- 650 $a and $x 
+			//subject --- 650 $a and $x (joined by " -- ") 
 			fields = betterMarcRecord.getDataFields("650");
 			for(DataField field : fields) {
 				String subfieldA = StringUtils.join(BetterMarcRecord.getDataFieldValue(field, null, null, 'a'), ", ").trim();
@@ -149,15 +149,15 @@ public class SiteData {
 				
 				String result = "";
 				
-				if(subfieldX.isEmpty() && subfieldA.equals("Human rights")) {
+				if(subfieldA.equals("Human rights") && subfieldX.isEmpty()) {
 					//If $x is blank and $a equals "Human rights", use value "Human rights (General)"
 					result = "Human rights (General)";
-				} else if(subfieldA.equals(subfieldX)) {
-					//If $a and $x are the same, just use $a
+				} else if(subfieldA.equals(subfieldX) || subfieldX.isEmpty()) {
+					//If $a and $x are the same (or if $a is present and $x is blank), just use $a
 					result = BetterMarcRecord.removeCommonTrailingCharacters(subfieldA).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space;
 				} else {
 					//Otherwise combine $a and $x
-					result = BetterMarcRecord.removeCommonTrailingCharacters(subfieldA + " " + subfieldX).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space
+					result = BetterMarcRecord.removeCommonTrailingCharacters(subfieldA + " -- " + subfieldX).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space
 				}
 				
 				if( ! result.isEmpty() ) {
@@ -186,7 +186,7 @@ public class SiteData {
 			
 			//organizationBasedIn --- 008 field, bytes 15-17
 			String organizationBasedInCode = betterMarcRecord.getControlField("008").getData().substring(15, 18).trim();
-			if(organizationBasedInCode.startsWith("xx")) {
+			if(organizationBasedInCode.equals("xx")) {
 				this.organizationBasedIn = "undetermined";
 			} else {
 				this.organizationBasedIn = countryCodesToFullNamesMap.get(organizationBasedInCode);

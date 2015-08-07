@@ -198,7 +198,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>edu.columbia.ldpd.HrwaManager</mainClass>
+							<mainClass>edu.columbia.ldpd.hrwa.HrwaManager</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
