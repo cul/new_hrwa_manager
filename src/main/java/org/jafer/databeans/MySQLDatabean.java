@@ -31,7 +31,6 @@ package org.jafer.databeans;
 import org.jafer.exception.JaferException;
 import org.jafer.query.XMLRPNQuery;
 import org.w3c.dom.Node;
-import org.w3c.dom.Document;
 import java.util.logging.Level;
 import java.sql.Connection;
 import java.sql.Statement;

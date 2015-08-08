@@ -5,23 +5,18 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
 import java.util.Date;
-import java.util.Iterator;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.indices.IndexMissingException;
-import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.Aggregation;
 import org.jwat.arc.ArcReader;
 import org.jwat.arc.ArcReaderFactory;
 import org.jwat.arc.ArcRecordBase;
@@ -34,7 +29,6 @@ import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.MissingArchiveHeaderValueExc
 import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.UnexpectedRecordTypeException;
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.PageData;
-import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 
 public class ProcessPageDataWorker implements Runnable {
 	
@@ -65,7 +59,6 @@ public class ProcessPageDataWorker implements Runnable {
 		}
 		
 		//Get a connection for this worker
-		//this.conn = MysqlHelper.getNewDBConnection();
 		System.out.println("Connect at: " + HrwaManager.elasticsearchHostname + ", " + HrwaManager.elasticsearchPort);
 		elasticsearchClient = new TransportClient();
 		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
@@ -79,7 +72,6 @@ public class ProcessPageDataWorker implements Runnable {
 		}
 		
 		//Be sure to close the connection when we're done
-		//MysqlHelper.closeConnection(conn);
 		elasticsearchClient.close();
 	}
 	

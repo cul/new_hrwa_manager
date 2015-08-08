@@ -44,7 +44,6 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 
 import org.w3c.dom.Node;
-import org.w3c.dom.Document;
 
 
 class ActiveBean extends java.lang.Thread {

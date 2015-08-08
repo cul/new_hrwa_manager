@@ -2,10 +2,8 @@ package edu.columbia.ldpd.hrwa.tasks;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -13,10 +11,8 @@ import org.apache.commons.io.FileUtils;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.PageData;
-import edu.columbia.ldpd.hrwa.SiteData;
 import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
 import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
-import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 
 public class ProcessPageDataTask extends AbstractTask {
 	

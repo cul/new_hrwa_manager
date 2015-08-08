@@ -32,7 +32,6 @@ package org.jafer.databeans;
 
 import org.jafer.interfaces.DatabeanFactory;
 import org.jafer.interfaces.Databean;
-import org.jafer.interfaces.Z3950Connection;
 import org.jafer.exception.JaferException;
 import org.jafer.util.xml.XMLTransformer;
 import javax.xml.transform.Templates;

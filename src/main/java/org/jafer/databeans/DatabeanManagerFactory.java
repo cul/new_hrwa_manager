@@ -31,7 +31,6 @@
 
 package org.jafer.databeans;
 
-import java.io.*;
 import org.jafer.interfaces.Databean;
 import org.jafer.interfaces.DatabeanFactory;
 import java.util.Hashtable;

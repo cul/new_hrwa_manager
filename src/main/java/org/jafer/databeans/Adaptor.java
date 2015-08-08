@@ -26,8 +26,6 @@ import javax.xml.transform.*;
 import org.jafer.exception.*;
 import org.jafer.interfaces.*;
 import org.jafer.record.*;
-import org.jafer.util.xml.XMLTransformer;
-import org.w3c.dom.*;
 
 /**
  * <p>Super class for adaptors, includes methods to set transforms via templates object and specify source and target schemas - configured via server.xml</p>

@@ -29,11 +29,6 @@ import java.util.Hashtable;
 import java.util.Vector;
 
 import javax.xml.transform.Templates;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.TransformerFactoryConfigurationError;
-import javax.xml.transform.stream.StreamSource;
 
 import org.apache.xpath.CachedXPathAPI;
 import org.bouncycastle.util.Arrays;

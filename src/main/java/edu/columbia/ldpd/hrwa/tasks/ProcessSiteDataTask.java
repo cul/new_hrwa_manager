@@ -6,14 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -23,9 +17,7 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.SiteData;
-import edu.columbia.ldpd.hrwa.tasks.workers.ProcessPageDataWorker;
 import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
-import edu.columbia.ldpd.hrwa.util.MysqlHelper;
 import edu.columbia.ldpd.marc.z3950.MARCFetcher;
 
 public class ProcessSiteDataTask extends AbstractTask {

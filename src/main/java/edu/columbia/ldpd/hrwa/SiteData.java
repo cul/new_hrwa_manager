@@ -1,7 +1,5 @@
 package edu.columbia.ldpd.hrwa;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -11,8 +9,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -21,28 +17,19 @@ import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
-import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.Record;
@@ -1919,7 +1906,7 @@ public class SiteData {
 			    		.startObject("title")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("alternativeTitle")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("creatorName")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("summary")						.field("type", "string").field("store", false).field("index", "analyzed").endObject() //tokenize when indexing
+			    		.startObject("summary")						.field("type", "string").field("store", false).field("index", "no").endObject() //do not index at all (only store)
 		    		.endObject()
 			    .endObject()
 			.endObject();

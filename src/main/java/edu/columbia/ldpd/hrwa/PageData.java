@@ -3,7 +3,6 @@ package edu.columbia.ldpd.hrwa;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Date;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
@@ -12,10 +11,6 @@ import org.apache.tika.exception.TikaException;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.jackson.core.JsonFactory;
-import org.elasticsearch.common.jackson.core.JsonGenerator;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.jwat.arc.ArcRecordBase;
@@ -222,8 +217,6 @@ public class PageData {
 	}
 	
 	public void extractMimeTypeAndFulltextfromPayload(Payload payload) {
-		
-		String[] mimeTypeAndFulltext = new String[2];
 		
 		//Use Tika for mimetype detection and text extraction
 		//Extract from file
