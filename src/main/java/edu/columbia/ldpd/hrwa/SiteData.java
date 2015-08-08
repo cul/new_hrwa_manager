@@ -55,6 +55,9 @@ import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class SiteData {
 	
+	public static String STATUS_UPDATED = "updated";
+	public static String STATUS_DELETED = "deleted";
+	
 	private static HashMap<String, String> geographicAreasToFullNames = getGeographicAreasToFullNamesMap();
 	private static HashMap<String, String> countryCodesToFullNamesMap = getCountryCodesToFullNamesMap();
 	private static HashMap<String, String> languageCodesToFullNamesMap = getLanguageCodesToFullNamesMap();
@@ -62,6 +65,7 @@ public class SiteData {
 
 	public String bibId = null;
 	public String marc005LastModified = null;
+	public String status = "";
 	
 	public ArrayList<String> hostStrings = new ArrayList<String>();
 	public HashSet<String> relatedUrlPrefixStrings = new HashSet<String>();
@@ -307,8 +311,12 @@ public class SiteData {
 	
 	public void sendToSolr(SolrClient solrClient) {
 		
+		if(this.status.equals(STATUS_DELETED)) {
+			return;
+		}
+		
 		SolrInputDocument document = new SolrInputDocument();
-		//id == via copyfield
+		
 		document.addField("bib_key", this.bibId);
 		document.addField("title", this.title);
 		document.addField("marc_005_last_modified", this.marc005LastModified);
@@ -1895,6 +1903,7 @@ public class SiteData {
 						.field("enabled", true) //keep the source for now.  possibly disable later if not necessary
 					.endObject()
 					.startObject("properties")
+						.startObject("status")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("bibId")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("marc005LastModified")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("relatedUrlPrefixStrings")		.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
@@ -1925,6 +1934,7 @@ public class SiteData {
 	public XContentBuilder toElasticsearchJsonBuilder() throws IOException {
 		XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
 		
+		if(this.status != null) { builder.field("status", this.status); }
 		if(this.bibId != null) { builder.field("bibId", this.bibId); }
 		if(this.marc005LastModified != null) { builder.field("marc005LastModified", this.marc005LastModified); }
 		if(this.hostStrings.size() != 0) { builder.field("hostStrings", this.hostStrings); }

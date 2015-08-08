@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -87,7 +89,7 @@ public class ProcessSiteDataTask extends AbstractTask {
 					"Message: " + e.getMessage()
 				);
 			}
-			System.out.println("Processed " + counter + " of " + numberOfFilesToProcess + " archive files.");
+			System.out.println("Processed " + counter + " of " + numberOfFilesToProcess + " Site records.");
 			counter++;
 		}
 		
@@ -104,24 +106,104 @@ public class ProcessSiteDataTask extends AbstractTask {
 		if(foundAtLeastOneError) {
 			HrwaManager.logger.error("One or more errors were found during " + this.getClass().getName() + " run. These must be fixed before the process can continue:\n----------\n" + StringUtils.join(errors, "\n") + "\n----------\n\nRecords were NOT updated.");
 		} else {
-			//No errors found!  Let's save these records.
+			//No errors found!  Let's save/update these records.
 			
-			TransportClient elasticsearchClient = new TransportClient();
-			elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
-			
-			for(SiteData siteDataRecord : siteDataRecords) {
-				try {
-					siteDataRecord.sendToElasticsearch(elasticsearchClient);
-				} catch (ElasticsearchException e) {
-					HrwaManager.logger.error("ElasticsearchException encountered while sending SiteData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
-				} catch (IOException e) {
-					HrwaManager.logger.error("IOException encountered while sending PageData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
+			//To be safe, we're only going to perform deletion comparisons and updates if there are actual records to update
+			if(siteDataRecords.size() > 0) {
+				
+				//Get list of existing records so we can determine what changed and what needs to be marked as new or deleted
+				ArrayList<SiteData> existingRecords = SiteData.getAllRecords();
+				
+				//Get list of bib ids of existing records (for later comparison)
+				ArrayList<String> bibIdsOfExistingRecords = new ArrayList<String>();
+				for(SiteData siteData : existingRecords) {
+					bibIdsOfExistingRecords.add(siteData.bibId);
 				}
 				
+				//Get list of bib ids of latest set of records (for later comparison)
+				ArrayList<String> bibIdsOfLatestSetOfRecords = new ArrayList<String>();
+				for(SiteData siteDataRecord : siteDataRecords) {
+					bibIdsOfLatestSetOfRecords.add(siteDataRecord.bibId);
+				}
+				
+				//Generate mapping of bibId values to existing SiteData records
+				HashMap<String, SiteData> bibIdsToExistingSiteDataRecords = new HashMap<String, SiteData>();
+				for(SiteData siteDataRecord : existingRecords) {
+					bibIdsToExistingSiteDataRecords.put(siteDataRecord.bibId, siteDataRecord);
+				}
+				
+				//Generate mapping of bibId values to latest SiteData records
+				HashMap<String, SiteData> bibIdsToLatestSiteDataRecords = new HashMap<String, SiteData>();
+				for(SiteData siteDataRecord : siteDataRecords) {
+					bibIdsToLatestSiteDataRecords.put(siteDataRecord.bibId, siteDataRecord);
+				}
+				
+				//Generate list of records to be marked as new
+				HashSet<String> bibIdsOfNewRecords = new HashSet<String>(bibIdsOfLatestSetOfRecords);
+				bibIdsOfNewRecords.removeAll(bibIdsOfExistingRecords);
+				
+				//Generate list of records to be deleted
+				HashSet<String> bibIdsOfDeletedRecords = new HashSet<String>(bibIdsOfExistingRecords);
+				bibIdsOfDeletedRecords.removeAll(bibIdsOfLatestSetOfRecords);
+				
+				ArrayList<SiteData> changedRecords = new ArrayList<SiteData>(); 
+				int numberOfDeletedRecords = 0;
+				int numberOfNewRecords = 0;
+				int numberOfUpdatedExistingRecords = 0;
+				
+				//Go through and mark records appropriately, and then send them for updates
+				
+				//Mark deleted records as changed and add them to the list of changed records that need updating 
+				for(String bibId : bibIdsOfDeletedRecords) {
+					SiteData siteData = bibIdsToExistingSiteDataRecords.get(bibId); //MUST select deleted records from EXISTING set of records, not the LATEST set
+					siteData.status = SiteData.STATUS_DELETED;
+					changedRecords.add(siteData);
+					numberOfDeletedRecords++;
+				}
+				//Also add new records to the list of changed records that need updating,
+				//along with existing records that require updating because of marc 005 field changes.
+				//Select new/updated records from LATEST set of records, not the EXISTING set (otherwise new records wouldn't be present).
+				for(SiteData siteDataRecord : siteDataRecords) {
+					if(bibIdsOfNewRecords.contains(siteDataRecord.bibId)) {
+						//Mark new sites as updated
+						siteDataRecord.status = SiteData.STATUS_UPDATED;
+						changedRecords.add(siteDataRecord);
+						numberOfNewRecords++;
+					} else if( ! bibIdsToExistingSiteDataRecords.get(siteDataRecord.bibId).marc005LastModified.equals(bibIdsToLatestSiteDataRecords.get(siteDataRecord.bibId).marc005LastModified))  {
+						System.out.println("Found existing record to UPDATE!");
+						//Mark updated records as updated if their marc 005 value changed
+						siteDataRecord.status = SiteData.STATUS_UPDATED;
+						changedRecords.add(siteDataRecord);
+						numberOfUpdatedExistingRecords++;
+					}
+				}
+				
+				System.out.println("Will mark " + numberOfDeletedRecords + " removed " + (numberOfDeletedRecords == 1 ? "Site" : "Sites") + " as: " + SiteData.STATUS_DELETED);
+				System.out.println("Will mark " + numberOfNewRecords + " new " + (numberOfNewRecords == 1 ? "Site" : "Sites") + " as: " + SiteData.STATUS_UPDATED);
+				System.out.println("Will mark " + numberOfUpdatedExistingRecords + " existing " + (numberOfUpdatedExistingRecords == 1 ? "Site" : "Sites") + " as: " + SiteData.STATUS_UPDATED);
+				
+				TransportClient elasticsearchClient = new TransportClient();
+				elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+				
+				int changedRecordCounter = 1;
+				int numberOfChangedRecords = changedRecords.size();
+				System.out.println("--> " + numberOfChangedRecords + " " + (numberOfChangedRecords == 1 ? "record has" : "records have") + " changed.");
+				for(SiteData siteDataRecord : changedRecords) {
+					try {
+						siteDataRecord.sendToElasticsearch(elasticsearchClient);
+						System.out.println("Sent record " + changedRecordCounter + " of " + numberOfChangedRecords + " to Elasticsearch.");
+					} catch (ElasticsearchException e) {
+						HrwaManager.logger.error("ElasticsearchException encountered while sending SiteData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
+					} catch (IOException e) {
+						HrwaManager.logger.error("IOException encountered while sending PageData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
+					}
+					changedRecordCounter++;
+				}
+				
+				//Be sure to close the connection when we're done
+				elasticsearchClient.close();
 			}
 			
-			//Be sure to close the connection when we're done
-			elasticsearchClient.close();
 		}
 		
 		System.out.println("Flushing Elasticsearch updates...");
