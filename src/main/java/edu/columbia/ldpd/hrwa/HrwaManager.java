@@ -27,12 +27,18 @@ public class HrwaManager {
 	public static final long APP_START_TIME_IN_MILLIS = System.currentTimeMillis();
 	public static final long MAX_AVAILABLE_MEMORY_IN_BYTES = Runtime.getRuntime().maxMemory();
 	
-	public static final String ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME = "hrwa_archive_files";
-	public static final String ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME = "archive_file";
-	public static final String ELASTICSEARCH_PAGE_INDEX_NAME = "hrwa_pages";
-	public static final String ELASTICSEARCH_PAGE_TYPE_NAME = "page";
-	public static final String ELASTICSEARCH_SITE_INDEX_NAME = "hrwa_sites";
-	public static final String ELASTICSEARCH_SITE_TYPE_NAME = "site";
+	public static final String 	ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME = "hrwa_archive_files";
+	public static final int 	ELASTICSEARCH_ARCHIVE_FILE_INDEX_NUM_SHARDS = 1;
+	public static final int 	ELASTICSEARCH_ARCHIVE_FILE_INDEX_NUM_REPLICAS = 0;
+	public static final String 	ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME = "archive_file";
+	public static final String 	ELASTICSEARCH_PAGE_INDEX_NAME = "hrwa_pages";
+	public static final int 	ELASTICSEARCH_PAGE_INDEX_NUM_SHARDS = 1;
+	public static final int 	ELASTICSEARCH_PAGE_INDEX_NUM_REPLICAS = 0;
+	public static final String 	ELASTICSEARCH_PAGE_TYPE_NAME = "page";
+	public static final String 	ELASTICSEARCH_SITE_INDEX_NAME = "hrwa_sites";
+	public static final int 	ELASTICSEARCH_SITE_INDEX_NUM_SHARDS = 1;
+	public static final int 	ELASTICSEARCH_SITE_INDEX_NUM_REPLICAS = 0;
+	public static final String 	ELASTICSEARCH_SITE_TYPE_NAME = "site";
 	
 	public static final String MARC_DOWNLOAD_DIR = "temp/marcxml-download";
 	public static final String HRWA_965_MARKER = "965hrportal";

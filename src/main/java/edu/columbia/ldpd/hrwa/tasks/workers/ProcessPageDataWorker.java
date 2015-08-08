@@ -27,6 +27,7 @@ import org.jwat.warc.WarcRecord;
 import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord;
 import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.MissingArchiveHeaderValueException;
 import edu.columbia.ldpd.hrwa.ArchiveFileInfoRecord.UnexpectedRecordTypeException;
+import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.PageData;
 
@@ -149,6 +150,9 @@ public class ProcessPageDataWorker implements Runnable {
 	        .setSource(jsonBuilder)
 	        .execute()
 	        .actionGet();
+		
+		//And flush changes because we want this to be reflected immediately to avoid any redundant processing
+		ElasticsearchHelper.flushIndexChanges(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME);
 	}
 	
 	public boolean hasArchiveFileBeenProcessed(String archiveFileName) throws IOException {

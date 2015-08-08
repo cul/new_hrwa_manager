@@ -177,10 +177,31 @@ public class PageData {
 			    .endObject()
 			.endObject();
 			
-			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_PAGE_INDEX_NAME, 3, 1, HrwaManager.ELASTICSEARCH_PAGE_TYPE_NAME, mappingBuilder);
+			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_PAGE_INDEX_NAME, HrwaManager.ELASTICSEARCH_PAGE_INDEX_NUM_SHARDS, HrwaManager.ELASTICSEARCH_PAGE_INDEX_NUM_REPLICAS, HrwaManager.ELASTICSEARCH_PAGE_TYPE_NAME, mappingBuilder);
 			
 		} catch (IOException e) {
-			HrwaManager.logger.error("IOException encountered while creating mapping for " + PageData.class.getName() + ".  Message: " + e.getMessage());
+			HrwaManager.logger.error("IOException encountered while creating mapping for Elasticsearch" + HrwaManager.ELASTICSEARCH_PAGE_INDEX_NAME + " index.  Message: " + e.getMessage());
+		}
+	}
+	
+	public static void creatArchiveFileElastisearchIndexIfNotExist() {
+		try {
+			
+			XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject()
+				.startObject(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME)
+					.startObject("_source")
+						.field("enabled", true) //keep the source for now.  possibly disable later if not necessary
+					.endObject()
+					.startObject("properties")
+			    		//There are no custom fields to be defined.  Only the _id field is used.
+		    		.endObject()
+			    .endObject()
+			.endObject();
+			
+			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NUM_SHARDS, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NUM_REPLICAS, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME, mappingBuilder);
+			
+		} catch (IOException e) {
+			HrwaManager.logger.error("IOException encountered while creating mapping for Elasticsearch" + HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME + " index.  Message: " + e.getMessage());
 		}
 	}
 

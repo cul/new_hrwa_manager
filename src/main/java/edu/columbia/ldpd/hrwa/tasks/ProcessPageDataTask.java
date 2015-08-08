@@ -28,6 +28,7 @@ public class ProcessPageDataTask extends AbstractTask {
 		
 		//Create Elasticsearch index if it doesn't already exist
 		PageData.creatElastisearchIndexIfNotExist();
+		PageData.creatArchiveFileElastisearchIndexIfNotExist();
 		
 		//Get all archive files
 		ArrayList<File> archiveFiles = getAlphabeticallySortedListOfArchiveFiles(HrwaManager.archiveFileDirectory);

@@ -1911,10 +1911,10 @@ public class SiteData {
 			    .endObject()
 			.endObject();
 			
-			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME, 1, 1, HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME, mappingBuilder);
+			ElasticsearchHelper.createElasticsearchIndexIfNotExists(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME, HrwaManager.ELASTICSEARCH_SITE_INDEX_NUM_SHARDS, HrwaManager.ELASTICSEARCH_SITE_INDEX_NUM_REPLICAS, HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME, mappingBuilder);
 			
 		} catch (IOException e) {
-			HrwaManager.logger.error("IOException encountered while creating mapping for " + SiteData.class.getName() + ".  Message: " + e.getMessage());
+			HrwaManager.logger.error("IOException encountered while creating mapping for Elasticsearch" + HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME + " index.  Message: " + e.getMessage());
 		}
 	}
 	
