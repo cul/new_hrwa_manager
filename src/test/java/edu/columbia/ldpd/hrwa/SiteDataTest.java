@@ -145,6 +145,7 @@ public class SiteDataTest {
 		}
 		
 		String expectedJson = "{" +
+			"\"status\":\"\"," +
 			"\"bibId\":\"7832247\"," +
 			"\"marc005LastModified\":\"20120418210020.0\"," +
 			"\"hostStrings\":[\"518.org\"]," +
