@@ -269,7 +269,10 @@ public class PageData {
 				}
 				
 			} catch (TikaException e) {
-				HrwaManager.logger.info("TikaException encountered while parsing record content with Tika.  Unable to parse record at byte " + this.archiveFileOffset + " in " + this.archiveFileName + ".  Message: " + e.getMessage());
+				//This is a debug-level message because there's generally nothing that we can do about TikaExceptions.
+				//A TikaException generally comes with a message that says "Unable to parse record", so putting them in
+				//a higher level than DEBUG just fills up logs.
+				HrwaManager.logger.debug("TikaException encountered while parsing record content with Tika.  Unable to parse record at byte " + this.archiveFileOffset + " in " + this.archiveFileName + ".  Message: " + e.getMessage());
 				this.fulltext = "";
 			} finally {
 				if(stream != null) {
