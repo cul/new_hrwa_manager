@@ -146,16 +146,20 @@
 					<groupId>log4j</groupId>
 					<artifactId>log4j</artifactId>
 				</exclusion>
+<!-- 				<exclusion> -->
+<!-- 					<groupId>commons-logging</groupId> -->
+<!-- 					<artifactId>commons-logging</artifactId> -->
+<!-- 				</exclusion> -->
 			</exclusions>
 		</dependency>
-		
+
 		<!-- Solr -->
 		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
 			<version>5.1.0</version>
 		</dependency>
-		
+
 		<!-- Reading CSV files -->
 		<dependency>
 			<groupId>com.opencsv</groupId>
@@ -184,14 +188,14 @@
 
 	<build>
 		<!-- Files to include -->
-<!-- 		<resources> -->
-<!-- 			<resource> -->
-<!-- 				<directory>${basedir}/res</directory> -->
-<!-- 			</resource> -->
-<!-- 			<resource> -->
-<!-- 				<directory>src/main/resources</directory> -->
-<!-- 			</resource> -->
-<!-- 		</resources> -->
+		<!-- <resources> -->
+		<!-- <resource> -->
+		<!-- <directory>${basedir}/res</directory> -->
+		<!-- </resource> -->
+		<!-- <resource> -->
+		<!-- <directory>src/main/resources</directory> -->
+		<!-- </resource> -->
+		<!-- </resources> -->
 		<plugins>
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>

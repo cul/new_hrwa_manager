@@ -24,8 +24,6 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -1951,12 +1949,10 @@ public class SiteData {
 	}
 	
 	public static ArrayList<SiteData> getAllRecords() {
-		TransportClient elasticsearchClient = new TransportClient();
-		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
 		
 		ArrayList<SiteData> siteDataRecords = new ArrayList<SiteData>();
 
-		SearchResponse scrollResp = elasticsearchClient.prepareSearch(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME)
+		SearchResponse scrollResp = ElasticsearchHelper.getTransportClient().prepareSearch(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME)
 			.setTypes(HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME)
 	        .setSearchType(SearchType.SCAN)
 	        .setScroll(new TimeValue(60_000)) //60 seconds should be enough time to process EACH scroll batch
@@ -1966,15 +1962,12 @@ public class SiteData {
 		    for (SearchHit hit : scrollResp.getHits().getHits()) {
 		        siteDataRecords.add(getSiteDataFromElasticsearchHit(hit));
 		    }
-		    scrollResp = elasticsearchClient.prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(600000)).execute().actionGet();
+		    scrollResp = ElasticsearchHelper.getTransportClient().prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(600000)).execute().actionGet();
 		    //Break condition: No hits are returned
 		    if (scrollResp.getHits().getHits().length == 0) {
 		        break;
 		    }
 		}
-		
-		//Be sure to close the connection when we're done
-		elasticsearchClient.close();
 		
 		return siteDataRecords;
 	}

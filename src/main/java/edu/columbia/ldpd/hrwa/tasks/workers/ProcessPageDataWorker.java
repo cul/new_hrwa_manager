@@ -10,8 +10,6 @@ import java.util.Date;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -37,9 +35,7 @@ public class ProcessPageDataWorker implements Runnable {
 	public static final int NUM_MILLIS_OF_WAIT_TIME_BEFORE_LOGGING_WARNING = 120000; // If we wait for too long, this should be logged so that the user can tweak memory limits.
 	public static final int MAX_FULLTEXT_CHARS_TO_EXTRACT =   100000; // 100000 == .1 MB.  Higher numbers will result in higher memory usage for larger files.
 	
-	//private Connection conn;
 	private File archiveFile;
-	private TransportClient elasticsearchClient;
 	
 	public ProcessPageDataWorker(String pathToArchiveFile) {
 		archiveFile = new File(pathToArchiveFile);
@@ -59,11 +55,6 @@ public class ProcessPageDataWorker implements Runnable {
 			try { Thread.sleep(HIGH_MEMORY_USAGE_POLLING_DELAY_IN_MILLIS); } catch (InterruptedException e) { e.printStackTrace(); }
 		}
 		
-		//Get a connection for this worker
-		System.out.println("Connect at: " + HrwaManager.elasticsearchHostname + ", " + HrwaManager.elasticsearchPort);
-		elasticsearchClient = new TransportClient();
-		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
-		
 		try {
 			if( ! hasArchiveFileBeenProcessed(this.archiveFile.getName()) ) {
 				processArchiveFile();
@@ -71,9 +62,6 @@ public class ProcessPageDataWorker implements Runnable {
 		} catch (IOException e) {
 			HrwaManager.logger.error("An IOException occurred while checking whether an archive file had already been processed. Archive file name: " + this.archiveFile.getName());
 		}
-		
-		//Be sure to close the connection when we're done
-		elasticsearchClient.close();
 	}
 	
 	public void processArchiveFile() {
@@ -146,7 +134,7 @@ public class ProcessPageDataWorker implements Runnable {
 		        .field("processDate", new Date())
 		    .endObject();
 		
-		IndexResponse response = elasticsearchClient.prepareIndex(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME, this.archiveFile.getName())
+		IndexResponse response = ElasticsearchHelper.getTransportClient().prepareIndex(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME, HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME, this.archiveFile.getName())
 	        .setSource(jsonBuilder)
 	        .execute()
 	        .actionGet();
@@ -157,7 +145,7 @@ public class ProcessPageDataWorker implements Runnable {
 	
 	public boolean hasArchiveFileBeenProcessed(String archiveFileName) throws IOException {
 		try {
-			SearchResponse response = elasticsearchClient.prepareSearch(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME)
+			SearchResponse response = ElasticsearchHelper.getTransportClient().prepareSearch(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_INDEX_NAME)
 			        .setTypes(HrwaManager.ELASTICSEARCH_ARCHIVE_FILE_TYPE_NAME)
 			        .setQuery(QueryBuilders.termQuery("_id", archiveFileName))
 			        .setFrom(0).setSize(1)
@@ -190,7 +178,7 @@ public class ProcessPageDataWorker implements Runnable {
 		if( pageData.shouldBeSkipped() ) { return; }
 		
 		try {
-			pageData.sendToElasticsearch(this.elasticsearchClient);
+			pageData.sendToElasticsearch(ElasticsearchHelper.getTransportClient());
 		} catch (ElasticsearchException e) {
 			HrwaManager.logger.error("ElasticsearchException encountered while sending PageData to Elasticsearch. File: " + pageData.archiveFileName + ", Byte Offset: " + pageData.archiveFileOffset + ", Error Message: " + e.getMessage());
 		} catch (IOException e) {

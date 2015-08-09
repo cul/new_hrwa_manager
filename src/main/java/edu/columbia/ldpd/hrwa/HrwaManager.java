@@ -17,6 +17,7 @@ import edu.columbia.ldpd.hrwa.tasks.AbstractTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessPageDataTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessSiteDataTask;
 import edu.columbia.ldpd.hrwa.tasks.SiteDataToSolrTask;
+import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 
 public class HrwaManager {
 
@@ -81,9 +82,16 @@ public class HrwaManager {
 		if(HrwaManager.runTaskSiteDataToSolr){ tasksToRun.add(new SiteDataToSolrTask()); }
 		if(HrwaManager.runTaskPageDataToSolr){}
 		
+		
+		//Connect to elasticsearch
+		ElasticsearchHelper.openTransportClientConnection();
+		
 		for(AbstractTask task : tasksToRun) {
 			task.runTask();
 		}
+		
+		//Disconnect from elasticsearch
+		ElasticsearchHelper.closeTransportClientConnection();
 
 	}
 

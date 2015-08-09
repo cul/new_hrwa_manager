@@ -2,6 +2,13 @@
 
   <timestamp key="currentTimestamp" datePattern="yyyy-MM-dd-HHmmss"/>
 
+  <!-- BEGIN TIKA stuff: Ignore certain WARN level messages from Tika dependencies -->
+  <!-- Ignore "FlateFilter" warnings from pdfbox because we can't do anything about them. -->
+  <logger name="org.apache.pdfbox" level="OFF"/>
+  <!-- Ignore "Font not found", "Could not find font", etc. errors from fontbox because we can't do anything about them. -->
+  <logger name="org.apache.fontbox" level="OFF"/>
+  <!-- END TIKA stuff -->
+
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
     <file>logs/hrwa-manager-${currentTimestamp}.log</file>
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">

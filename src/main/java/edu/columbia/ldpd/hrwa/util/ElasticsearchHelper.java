@@ -8,6 +8,7 @@ import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRespon
 import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.admin.indices.flush.FlushResponse;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -19,22 +20,29 @@ import edu.columbia.ldpd.hrwa.SiteData;
 
 public class ElasticsearchHelper {
 	
-	public static void flushIndexChanges(String indexName) {
-		TransportClient elasticsearchClient = new TransportClient();
+	private static TransportClient elasticsearchClient;
+	
+	public static TransportClient getTransportClient() {
+		return ElasticsearchHelper.elasticsearchClient;
+	}
+	
+	public static void openTransportClientConnection() {
+		//Note: Client is thread-safe
+		elasticsearchClient = new TransportClient();
 		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
-		
-		final FlushResponse res = elasticsearchClient.admin().indices().prepareFlush(indexName).execute().actionGet();
-		
-		//Be sure to close the connection when we're done
+	}
+	
+	public static void closeTransportClientConnection() {
 		elasticsearchClient.close();
 	}
 	
+	public static void flushIndexChanges(String indexName) {
+		final FlushResponse res = ElasticsearchHelper.getTransportClient().admin().indices().prepareFlush(indexName).execute().actionGet();
+	}
+	
 	public static void createElasticsearchIndexIfNotExists(String indexName, int numShards, int numReplicas, String typeName, XContentBuilder mappingBuilderForType) {
-		TransportClient elasticsearchClient = new TransportClient();
-		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
-
 		// Check if index exists already. If so, return.
-        final IndicesExistsResponse res = elasticsearchClient.admin().indices().prepareExists(indexName).execute().actionGet();
+        final IndicesExistsResponse res = ElasticsearchHelper.getTransportClient().admin().indices().prepareExists(indexName).execute().actionGet();
         if (res.isExists()) {
         	return;
 //        	System.out.println("DELETING OLD INDEX"); //TODO: Stop deleting old index after testing is complete
@@ -51,10 +59,7 @@ public class ElasticsearchHelper {
 		//Set Mapping
 		indexRequest.mapping(typeName, mappingBuilderForType);
 		
-		CreateIndexResponse indexResponse = elasticsearchClient.admin().indices().create(indexRequest).actionGet();
-		
-		//Be sure to close the connection when we're done
-		elasticsearchClient.close();
+		CreateIndexResponse indexResponse = ElasticsearchHelper.getTransportClient().admin().indices().create(indexRequest).actionGet();
 	}
 	
 }

@@ -1,6 +1,7 @@
 package edu.columbia.ldpd.hrwa;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.regex.Pattern;

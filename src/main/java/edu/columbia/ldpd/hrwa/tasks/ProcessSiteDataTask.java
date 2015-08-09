@@ -12,8 +12,6 @@ import java.util.HashSet;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.SiteData;
@@ -174,15 +172,12 @@ public class ProcessSiteDataTask extends AbstractTask {
 				System.out.println("Will mark " + numberOfNewRecords + " new " + (numberOfNewRecords == 1 ? "Site" : "Sites") + " as: " + SiteData.STATUS_UPDATED);
 				System.out.println("Will mark " + numberOfUpdatedExistingRecords + " existing " + (numberOfUpdatedExistingRecords == 1 ? "Site" : "Sites") + " as: " + SiteData.STATUS_UPDATED);
 				
-				TransportClient elasticsearchClient = new TransportClient();
-				elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
-				
 				int changedRecordCounter = 1;
 				int numberOfChangedRecords = changedRecords.size();
 				System.out.println("--> " + numberOfChangedRecords + " " + (numberOfChangedRecords == 1 ? "record has" : "records have") + " changed.");
 				for(SiteData siteDataRecord : changedRecords) {
 					try {
-						siteDataRecord.sendToElasticsearch(elasticsearchClient);
+						siteDataRecord.sendToElasticsearch(ElasticsearchHelper.getTransportClient());
 						System.out.println("Sent record " + changedRecordCounter + " of " + numberOfChangedRecords + " to Elasticsearch.");
 					} catch (ElasticsearchException e) {
 						HrwaManager.logger.error("ElasticsearchException encountered while sending SiteData to Elasticsearch. Bib ID: " + siteDataRecord.bibId + ", Error Message: " + e.getMessage());
@@ -191,9 +186,6 @@ public class ProcessSiteDataTask extends AbstractTask {
 					}
 					changedRecordCounter++;
 				}
-				
-				//Be sure to close the connection when we're done
-				elasticsearchClient.close();
 			}
 			
 		}
