@@ -30,6 +30,13 @@ public class ElasticsearchHelper {
 		//Note: Client is thread-safe
 		elasticsearchClient = new TransportClient();
 		elasticsearchClient.addTransportAddress(new InetSocketTransportAddress(HrwaManager.elasticsearchHostname, HrwaManager.elasticsearchPort));
+		
+		//Sleep for 2 seconds to allow the connection to be established before work begins
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public static void closeTransportClientConnection() {
@@ -60,6 +67,13 @@ public class ElasticsearchHelper {
 		indexRequest.mapping(typeName, mappingBuilderForType);
 		
 		CreateIndexResponse indexResponse = ElasticsearchHelper.getTransportClient().admin().indices().create(indexRequest).actionGet();
+		
+		//Sleep for 2 seconds to allow the index to be fully created before future code works with it
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 	
 }
