@@ -5,18 +5,14 @@ import java.io.IOException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
-import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.admin.indices.flush.FlushResponse;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
-import edu.columbia.ldpd.hrwa.SiteData;
 
 public class ElasticsearchHelper {
 	
@@ -52,8 +48,6 @@ public class ElasticsearchHelper {
         final IndicesExistsResponse res = ElasticsearchHelper.getTransportClient().admin().indices().prepareExists(indexName).execute().actionGet();
         if (res.isExists()) {
         	return;
-//        	System.out.println("DELETING OLD INDEX"); //TODO: Stop deleting old index after testing is complete
-//        	DeleteIndexResponse delete = elasticsearchClient.admin().indices().delete(new DeleteIndexRequest(HrwaManager.ELASTICSEARCH_SITE_INDEX)).actionGet();
         }
         
         // Create the index with appropriate settings

@@ -98,8 +98,10 @@ public class ProcessSiteDataTask extends AbstractTask {
 		} else {
 			//No errors found!  Let's save/update these records.
 			
-			//To be safe, we're only going to perform deletion comparisons and updates if there are actual records to update
-			if(siteDataRecords.size() > 0) {
+			//To be safe, we're only going to perform deletion comparisons and updates if there is at least one record to update
+			if(siteDataRecords.size() == 0) {
+				HrwaManager.logger.error("-- Zero source MARC site records were found.  This is suspicious, so no updates will be performed. --");
+			} else {
 				
 				//Get list of existing records so we can determine what changed and what needs to be marked as new or deleted
 				ArrayList<SiteData> existingRecords = SiteData.getAllRecords();

@@ -17,7 +17,7 @@ import edu.columbia.ldpd.hrwa.util.ElasticsearchHelper;
 
 public class ProcessPageDataTask extends AbstractTask {
 	
-	public static final int STATUS_POLLING_INTERVAL_IN_MILLIS = 10000; // How frequently we get status messages about progress during processing. 
+	public static final int STATUS_POLLING_INTERVAL_IN_MILLIS = 60000; // How frequently we get status messages about progress during processing. 
 	private static final String[] archiveFileExtensions = {"arc.gz", "warc.gz"};
 	
 	public ProcessPageDataTask() {
@@ -26,6 +26,8 @@ public class ProcessPageDataTask extends AbstractTask {
 
 	@Override
 	public void taskImpl() {
+		
+		long startTime = System.currentTimeMillis();
 		
 		//Create Elasticsearch index if it doesn't already exist
 		PageData.creatElastisearchIndexIfNotExist();
@@ -46,7 +48,8 @@ public class ProcessPageDataTask extends AbstractTask {
         while (!executor.isTerminated()) {
         	System.out.println(
         		"Processed " + executor.getCompletedTaskCount() + " of " + numberOfFilesToProcess + " archive files." + "\n" +
-        		HrwaManager.getCurrentAppMemoryUsageMessage()
+        		HrwaManager.getCurrentAppMemoryUsageMessage() + "\n" +
+        		this.getClass().getSimpleName() + " run time: " + ((System.currentTimeMillis()-startTime)/1000) + " seconds"
         	);
         	try { Thread.sleep(STATUS_POLLING_INTERVAL_IN_MILLIS); } catch (InterruptedException e) { e.printStackTrace(); }
         }

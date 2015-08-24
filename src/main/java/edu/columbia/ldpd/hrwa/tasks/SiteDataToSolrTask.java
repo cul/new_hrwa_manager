@@ -10,6 +10,7 @@ import org.apache.solr.client.solrj.impl.HttpSolrClient;
 
 import edu.columbia.ldpd.hrwa.HrwaManager;
 import edu.columbia.ldpd.hrwa.SiteData;
+import edu.columbia.ldpd.hrwa.util.SolrHelper;
 
 public class SiteDataToSolrTask extends AbstractTask {
 	
@@ -41,12 +42,11 @@ public class SiteDataToSolrTask extends AbstractTask {
 			
 			//Ensure that there is at least one record to update (for safety, so that we don't delete all records and have no records to update)
 			if(siteDataRecords.size() > 0) {
-				//Establish connection to solr
-				SolrClient solrClient = new HttpSolrClient(HrwaManager.sitesSolrUrl);
+				SolrHelper.openSitesSolrClientConnection();
 				
 				//Delete current records
 				try {
-					solrClient.deleteByQuery("*:*");
+					SolrHelper.getSitesSolrClient().deleteByQuery("*:*");
 				} catch (SolrServerException | IOException e) {
 					HrwaManager.logger.error("Exception encountered while deleting existing site solr docs in " + this.getClass().getName() + ".  Message: " + e.getMessage());
 				}
@@ -56,25 +56,21 @@ public class SiteDataToSolrTask extends AbstractTask {
 				int total = siteDataRecords.size();
 				System.out.println("Sending sites to solr...");
 				for(SiteData siteData : siteDataRecords) {
-					siteData.sendToSolr(solrClient);
+					siteData.sendToSolr(SolrHelper.getSitesSolrClient());
 					i++;
 					System.out.println("Sent " + i + " of " + total);
 				}
 				
 				// Commit changes
 				try {
-					solrClient.commit();
+					SolrHelper.getSitesSolrClient().commit();
 					System.out.println("Updates committed.");
 				} catch (SolrServerException | IOException e) {
 					HrwaManager.logger.error("Exception encountered while committing changes to solr in " + this.getClass().getName() + ".  Message: " + e.getMessage());
 				}
 
 				//Be sure to close solr client connection
-				try {
-					solrClient.close();
-				} catch (IOException e) {
-					HrwaManager.logger.error("IOException encountered while attempting to close connection to solr after " + this.getClass().getName() + " run. Message: " + e.getMessage());
-				}
+				SolrHelper.closeSitesClientConnection();
 			}
 			
 		}

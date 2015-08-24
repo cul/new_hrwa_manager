@@ -20,6 +20,7 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -27,7 +28,10 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.Record;
@@ -40,6 +44,7 @@ import edu.columbia.ldpd.hrwa.util.MetadataUtils;
 
 public class SiteData {
 	
+	public static String STATUS_NONE = "";
 	public static String STATUS_UPDATED = "updated";
 	public static String STATUS_DELETED = "deleted";
 	
@@ -50,7 +55,7 @@ public class SiteData {
 
 	public String bibId = null;
 	public String marc005LastModified = null;
-	public String status = "";
+	public String status = SiteData.STATUS_NONE; //default value
 	
 	public ArrayList<String> hostStrings = new ArrayList<String>();
 	public HashSet<String> relatedUrlPrefixStrings = new HashSet<String>();
@@ -1948,6 +1953,28 @@ public class SiteData {
 	        .actionGet();
 	}
 	
+	public void deleteFromElasticsearch(Client client) throws ElasticsearchException, IOException {
+		DeleteResponse response = client.prepareDelete(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME, HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME, this.bibId)
+	        .execute()
+	        .actionGet();
+	}
+	
+	public static SiteData getRecordByBibId(String bibId) {
+		SearchResponse response = ElasticsearchHelper.getTransportClient().prepareSearch(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME)
+		        .setTypes(HrwaManager.ELASTICSEARCH_SITE_TYPE_NAME)
+		        .setQuery(QueryBuilders.termQuery("_id", bibId))
+		        .setFrom(0).setSize(1)
+		        .execute()
+		        .actionGet();
+		
+		SearchHits searchHits = response.getHits();
+		if(searchHits.getTotalHits() == 1) {
+			return getSiteDataFromElasticsearchHit(searchHits.getAt(0));
+		}
+		
+		return null;
+	}
+	
 	public static ArrayList<SiteData> getAllRecords() {
 		
 		ArrayList<SiteData> siteDataRecords = new ArrayList<SiteData>();
@@ -1960,7 +1987,7 @@ public class SiteData {
 		//Scroll until no hits are returned
 		while (true) {
 		    for (SearchHit hit : scrollResp.getHits().getHits()) {
-		        siteDataRecords.add(getSiteDataFromElasticsearchHit(hit));
+		        siteDataRecords.add(SiteData.getSiteDataFromElasticsearchHit(hit));
 		    }
 		    scrollResp = ElasticsearchHelper.getTransportClient().prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(600000)).execute().actionGet();
 		    //Break condition: No hits are returned
@@ -1985,6 +2012,11 @@ public class SiteData {
 		//marc005LastModified
 		if(sourceAsMap.containsKey("marc005LastModified")) {
 			siteData.marc005LastModified = (String)sourceAsMap.get("marc005LastModified");
+		}
+		
+		//status
+		if(sourceAsMap.containsKey("status")) {
+			siteData.status = (String)sourceAsMap.get("status");
 		}
 
 		//hostString

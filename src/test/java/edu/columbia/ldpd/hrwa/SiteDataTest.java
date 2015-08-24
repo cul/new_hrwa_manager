@@ -135,6 +135,7 @@ public class SiteDataTest {
     	SiteData.overrideRelatedUrlPrefixDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
     	
     	SiteData siteData = new SiteData(this.getClass().getResourceAsStream("/sample-marcxml.xml"));
+    	siteData.status = SiteData.STATUS_UPDATED;
 
 		String generatedJson = null;
 		try {
@@ -145,7 +146,7 @@ public class SiteDataTest {
 		}
 		
 		String expectedJson = "{" +
-			"\"status\":\"\"," +
+			"\"status\":\"" + SiteData.STATUS_UPDATED + "\"," +
 			"\"bibId\":\"7832247\"," +
 			"\"marc005LastModified\":\"20120418210020.0\"," +
 			"\"hostStrings\":[\"518.org\"]," +

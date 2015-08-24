@@ -26,6 +26,8 @@ public class PageDataTest {
     	//Get the first record, which is the arc info record
 		ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(arcReader.getNextRecord());
 		
+		boolean extractedAtLeastOneTitle = false;
+		
 		int counter = 0;
 		while (true) {
 			ArcRecordBase arcRecord = arcReader.getNextRecord();
@@ -46,9 +48,16 @@ public class PageDataTest {
 			assertTrue(pageData.mimetypeFromHeader != null);
 			assertTrue(pageData.detectedMimetype != null);
 			
+			if(pageData.title != null) {
+				System.out.println("Title: " + pageData.title);
+				extractedAtLeastOneTitle = true;
+			}
+			
 			counter++;
 			if(counter == 100) {break;} // Only testing the first 100 records
 		}
+		
+		assertTrue(extractedAtLeastOneTitle);
     }
     
     @Test
@@ -58,6 +67,8 @@ public class PageDataTest {
 		
 		//Get the first record, which is the warc info record
 		ArchiveFileInfoRecord infoRecord = new ArchiveFileInfoRecord(warcReader.getNextRecord());
+		
+		boolean extractedAtLeastOneTitle = false;
 		
 		int counter = 0;
 		while (true) {
@@ -79,9 +90,15 @@ public class PageDataTest {
 			assertTrue(pageData.mimetypeFromHeader != null);
 			assertTrue(pageData.detectedMimetype != null);
 			
+			if(pageData.title != null) {
+				extractedAtLeastOneTitle = true;
+			}
+			
 			counter++;
 			if(counter == 100) {break;} // Only testing the first 100 records
 		}
+		
+		assertTrue(extractedAtLeastOneTitle);
     }
     
     @Test
@@ -98,6 +115,7 @@ public class PageDataTest {
 		pageData.fulltext = "This is the full text.";
 		pageData.mimetypeFromHeader = "text/plain";
 		pageData.detectedMimetype = "text/plain";
+		pageData.title = "The Title";
 
 		String generatedJson = null;
 		try {
@@ -117,7 +135,8 @@ public class PageDataTest {
 			"\"crawlDate\":\"20150728\"," +
 			"\"fulltext\":\"This is the full text.\"," +
 			"\"mimetypeFromHeader\":\"text/plain\"," +
-			"\"detectedMimetype\":\"text/plain\"" +
+			"\"detectedMimetype\":\"text/plain\"," +
+			"\"title\":\"The Title\"" +
 		"}";
 		
 		assertEquals(expectedJson, generatedJson);

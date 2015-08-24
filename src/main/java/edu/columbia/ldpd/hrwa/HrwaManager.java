@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import edu.columbia.ldpd.hrwa.tasks.AbstractTask;
+import edu.columbia.ldpd.hrwa.tasks.PageDataToSolrTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessPageDataTask;
 import edu.columbia.ldpd.hrwa.tasks.ProcessSiteDataTask;
 import edu.columbia.ldpd.hrwa.tasks.SiteDataToSolrTask;
@@ -54,6 +55,7 @@ public class HrwaManager {
 	public static String archiveFileDirectory;
 	public static String relatedHostsFile = "";
 	public static boolean reuseLatestDownloadedVoyagerData;
+	public static String waybackUrlPrefix;
 	public static boolean runTaskProcessSiteData;
 	public static boolean runTaskProcessPageData;
 	public static boolean runTaskSiteDataToSolr;
@@ -80,7 +82,7 @@ public class HrwaManager {
 		if(HrwaManager.runTaskProcessSiteData){ tasksToRun.add(new ProcessSiteDataTask()); }
 		if(HrwaManager.runTaskProcessPageData){ tasksToRun.add(new ProcessPageDataTask()); }
 		if(HrwaManager.runTaskSiteDataToSolr){ tasksToRun.add(new SiteDataToSolrTask()); }
-		if(HrwaManager.runTaskPageDataToSolr){}
+		if(HrwaManager.runTaskPageDataToSolr){ tasksToRun.add(new PageDataToSolrTask()); }
 		
 		
 		//Connect to elasticsearch
@@ -92,6 +94,8 @@ public class HrwaManager {
 		
 		//Disconnect from elasticsearch
 		ElasticsearchHelper.closeTransportClientConnection();
+		
+		System.out.println("HrwaManager run complete!");
 
 	}
 
@@ -115,6 +119,8 @@ public class HrwaManager {
 				"CSV file that contains a hosts-to-related hosts mapping.");
 		options.addOption("reuse_latest_downloaded_marc_data", false,
 				"Reuse latest copy of downloaded marc data rather than downloading the latest version.");
+		options.addOption("wayback_url_prefix", true,
+				"URL prefix for the Archive-It wayback link to this record.");
 		// Task-related options
 		options.addOption("run_task_process_site_data", false,
 				"Process site data from Voyager (and related hosts file) and save it to the datastore.");
@@ -122,7 +128,7 @@ public class HrwaManager {
 				"Process page data from ARC/WARC files and save it to the datastore.");
 		options.addOption("run_task_site_data_to_solr", false,
 				"Index SITE data from datastore into solr sites core.");
-		options.addOption("run_task_pages_to_solr", false,
+		options.addOption("run_task_page_data_to_solr", false,
 				"Index PAGE data from database into solr pages core.");
 		options.addOption("max_number_of_threads", true,
 				"Maximum number of threads to use for concurrent processing (when applicable).");
@@ -147,6 +153,7 @@ public class HrwaManager {
 				HrwaManager.archiveFileDirectory = cmdLine.getOptionValue("archive_file_directory");
 				HrwaManager.relatedHostsFile = cmdLine.getOptionValue("related_hosts_file");
 				HrwaManager.reuseLatestDownloadedVoyagerData = cmdLine.hasOption("reuse_latest_downloaded_marc_data");
+				HrwaManager.waybackUrlPrefix = cmdLine.getOptionValue("wayback_url_prefix");
 				HrwaManager.runTaskProcessSiteData = cmdLine.hasOption("run_task_process_site_data");
 				HrwaManager.runTaskProcessPageData = cmdLine.hasOption("run_task_process_page_data");
 				HrwaManager.runTaskSiteDataToSolr = cmdLine.hasOption("run_task_site_data_to_solr");
