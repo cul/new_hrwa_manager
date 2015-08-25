@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>edu.columbia.ldpd</groupId>
 	<artifactId>hrwa_manager</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<name>HRWA Manager</name>
 	<description>Data management application for the Columbia University Libraries Human Rights Web Archive</description>
 	<organization>

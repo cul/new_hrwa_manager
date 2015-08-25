@@ -61,7 +61,7 @@ public class PageData {
 	public String		fulltext; // Full text extracted from record content.
 	
 	//Derived Fields
-	public String 		originalUrlWithoutProtocol; // Version of the original URL without the protocol portion 
+	public String 		hostStringWithPath; // Version of the original URL without the protocol portion 
 	public String 		hostString; //Truncated url, only including hostname (without path), removing www, www1, www2, etc. if present.
 	
 	//Force skip
@@ -92,7 +92,7 @@ public class PageData {
 			forceSkipThisRecord = true;
 			return;
 		} else {
-			this.originalUrlWithoutProtocol = MetadataUtils.removeProtocolFromUrlString(this.originalUrl);
+			this.hostStringWithPath = MetadataUtils.extractHostStringWithPath(this.originalUrl);
 			this.hostString = MetadataUtils.extractHostString(this.originalUrl);
 		}
 		
@@ -139,7 +139,7 @@ public class PageData {
 			)
 		{
 			this.originalUrl = warcRecord.getHeader("WARC-Target-URI").value;
-			this.originalUrlWithoutProtocol = MetadataUtils.removeProtocolFromUrlString(this.originalUrl);
+			this.hostStringWithPath = MetadataUtils.extractHostStringWithPath(this.originalUrl);
 			this.hostString = MetadataUtils.extractHostString(this.originalUrl);
 		} else {
 			forceSkipThisRecord = true;
@@ -188,7 +188,7 @@ public class PageData {
 					.endObject()
 					.startObject("properties")
 			    		.startObject("originalUrl")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-						.startObject("originalUrlWithoutProtocol")	.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+						.startObject("hostStringWithPath")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 						.startObject("hostString")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 						.startObject("archiveFileName")				.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 						.startObject("archiveFileOffset")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
@@ -236,8 +236,8 @@ public class PageData {
 		XContentBuilder builder = XContentFactory.jsonBuilder()
 		    .startObject()
 		    	.field("originalUrl", this.originalUrl)
-		    	.field("originalUrlWithoutProtocol", this.originalUrlWithoutProtocol)
-				.field("hostString", this.hostString)
+		    	.field("hostString", this.hostString)
+		    	.field("hostStringWithPath", this.hostStringWithPath)
 				.field("archiveFileName", this.archiveFileName)
 				.field("archiveFileOffset", this.archiveFileOffset)
 				.field("contentLength", this.contentLength)
@@ -272,9 +272,9 @@ public class PageData {
 			pageData.originalUrl = (String)sourceAsMap.get("originalUrl");
 		}
     	
-    	//originalUrlWithoutProtocol
-		if(sourceAsMap.containsKey("originalUrlWithoutProtocol")) {
-			pageData.originalUrlWithoutProtocol = (String)sourceAsMap.get("originalUrlWithoutProtocol");
+    	//hostStringWithPath
+		if(sourceAsMap.containsKey("hostStringWithPath")) {
+			pageData.hostStringWithPath = (String)sourceAsMap.get("hostStringWithPath");
 		}
 		
 		//hostString
@@ -336,20 +336,20 @@ public class PageData {
 		document.addField("organization_based_in", associatedSiteData.organizationBasedIn);
 		document.addField("geographic_focus", associatedSiteData.geographicFocus);
 		document.addField("language", associatedSiteData.language);
-		document.addField("website_original_urls", associatedSiteData.hostStrings);
+		document.addField("website_original_urls", associatedSiteData.originalUrl);
 		
 		document.addField("domain", this.hostString);
 		
 		document.addField("title", this.title);
 		
-		document.addField("archived_url", HrwaManager.waybackUrlPrefix + this.originalUrl); 
+		document.addField("archived_url", HrwaManager.waybackUrlPrefix + this.crawlDate + "/" + this.originalUrl); 
 		document.addField("date_of_capture_yyyy", this.crawlDate.substring(0, 4));
 		document.addField("date_of_capture_yyyymm", this.crawlDate.substring(0, 6)); 
 		document.addField("date_of_capture_yyyymmdd", this.crawlDate.substring(0, 8));
 		document.addField("length", this.contentLength);
 		document.addField("original_url", this.originalUrl);
 		document.addField("mimetype", this.detectedMimetype == null ? this.mimetypeFromHeader : this.detectedMimetype); 
-		document.addField("mimetype_code", this.detectedMimetype);	//TODO: Create mapping for codes instead of using raw mimetype 
+		document.addField("mimetype_code", this.detectedMimetype == null ? this.mimetypeFromHeader : this.detectedMimetype);	//TODO: Create mapping for codes instead of using raw mimetype 
 		document.addField("record_date", this.crawlDate);
 		document.addField("record_identifier", this.getUniqueIdForRecord());   
 		document.addField("contents", this.fulltext);
@@ -375,7 +375,9 @@ public class PageData {
 			stream.close();
 			byteArrayInputStream.close();
 		} catch (IOException e) {
-			HrwaManager.logger.info("IOException encountered while converting payload InputStream to byte array (or possibly while closing InputStream).  Unable to parse record at byte " + this.archiveFileOffset + " in " + this.archiveFileName + ".  Message: " + e.getMessage());
+			HrwaManager.logger.info("IOException encountered while converting payload InputStream to byte array (or possibly while parsing/closing InputStream).  Unable to parse record at byte " + this.archiveFileOffset + " in " + this.archiveFileName + ".  Message: " + e.getMessage());
+		} catch (NegativeArraySizeException e) {
+			HrwaManager.logger.info("NegativeArraySizeException encountered while converting payload InputStream to byte array (or possibly while parsing InputStream).  This just means that we can't extract anything from the bytes.  Unable to parse record at byte " + this.archiveFileOffset + " in " + this.archiveFileName + ".  Message: " + e.getMessage());
 		}
 	}
 	

@@ -38,8 +38,8 @@ public class PageDataTest {
 			if( pageData.shouldBeSkipped() ) { continue; }
 			
 			assertTrue(pageData.originalUrl != null);
-			assertTrue(pageData.originalUrlWithoutProtocol != null);
 			assertTrue(pageData.hostString != null);
+			assertTrue(pageData.hostStringWithPath != null);
 			assertTrue(pageData.archiveFileName != null);
 			assertTrue(pageData.archiveFileOffset != 0);
 			assertTrue(pageData.contentLength != 0);
@@ -49,12 +49,11 @@ public class PageDataTest {
 			assertTrue(pageData.detectedMimetype != null);
 			
 			if(pageData.title != null) {
-				System.out.println("Title: " + pageData.title);
 				extractedAtLeastOneTitle = true;
 			}
 			
 			counter++;
-			if(counter == 100) {break;} // Only testing the first 100 records
+			if(counter == 50) {break;} // Only testing the first 50 records
 		}
 		
 		assertTrue(extractedAtLeastOneTitle);
@@ -80,8 +79,8 @@ public class PageDataTest {
 			if( pageData.shouldBeSkipped() ) { continue; }
 			
 			assertTrue(pageData.originalUrl != null);
-			assertTrue(pageData.originalUrlWithoutProtocol != null);
 			assertTrue(pageData.hostString != null);
+			assertTrue(pageData.hostStringWithPath != null);
 			assertTrue(pageData.archiveFileName != null);
 			assertTrue(pageData.archiveFileOffset != 0);
 			assertTrue(pageData.contentLength != 0);
@@ -95,7 +94,7 @@ public class PageDataTest {
 			}
 			
 			counter++;
-			if(counter == 100) {break;} // Only testing the first 100 records
+			if(counter == 50) {break;} // Only testing the first 50 records
 		}
 		
 		assertTrue(extractedAtLeastOneTitle);
@@ -105,8 +104,8 @@ public class PageDataTest {
     public void serializePageDataToElasticsearchJson() {
     	PageData pageData = new PageData();
     	
-    	pageData.originalUrl = "http://www.example.com";
-    	pageData.originalUrlWithoutProtocol = MetadataUtils.removeProtocolFromUrlString(pageData.originalUrl);
+    	pageData.originalUrl = "http://www.example.com/123";
+    	pageData.hostStringWithPath = MetadataUtils.extractHostStringWithPath(pageData.originalUrl);
     	pageData.hostString = MetadataUtils.extractHostString(pageData.originalUrl);
 		pageData.archiveFileName = "some-archive-file-12345.warc.gz";
 		pageData.archiveFileOffset = 42;
@@ -126,9 +125,9 @@ public class PageDataTest {
 		}
 		
 		String expectedJson = "{" +
-			"\"originalUrl\":\"http://www.example.com\"," +
-			"\"originalUrlWithoutProtocol\":\"www.example.com\"," +
+			"\"originalUrl\":\"http://www.example.com/123\"," +
 			"\"hostString\":\"example.com\"," +
+			"\"hostStringWithPath\":\"example.com/123\"," +
 			"\"archiveFileName\":\"some-archive-file-12345.warc.gz\"," +
 			"\"archiveFileOffset\":42," +
 			"\"contentLength\":56779," +

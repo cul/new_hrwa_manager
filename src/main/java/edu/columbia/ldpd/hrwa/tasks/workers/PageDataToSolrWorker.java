@@ -71,6 +71,7 @@ public class PageDataToSolrWorker implements Runnable {
 		}
 		
 		if( siteData.status.equals(SiteData.STATUS_DELETED) ) {
+			//Perform deletion
 			deleteSolrPagesForSiteDataAndRemoveSiteFromElasticsearchIndex(this.siteData);
 		} else if( siteData.status.equals(SiteData.STATUS_UPDATED) ) {
 			//Perform update
@@ -80,29 +81,30 @@ public class PageDataToSolrWorker implements Runnable {
 	
 	public void updateSolrPagesForSiteData(SiteData siteData) {
 		
-		//TODO: Processing
 		//1) Get associated Pages for this site (scroll through Elasticsearch results)
+		//2) Index those Pages into Solr using pageData.sendToSolr(SolrHelper.getPagesSolrClient(), siteData)
 		
 		BoolQueryBuilder prefixQuery = QueryBuilders.boolQuery();
 		
-		//Handle matching for original urls
-		for(String originalUrlWithoutProtocol : siteData.originalUrlWithoutProtocol) {
-			if(originalUrlWithoutProtocol.contains("/")) {
-				//If this URL contains a slash, then we must do a prefix match because we need to match on a subdirectory
-				prefixQuery.should(QueryBuilders.prefixQuery("originalUrlWithoutProtocol", originalUrlWithoutProtocol));
+		//Handle host string matching
+		for(String hostStringWithPath : siteData.hostStringsWithPath) {
+			if(hostStringWithPath.contains("/")) {
+				//If this hostStringWithPath contains a slash, then we must do a prefix match because we need to match on a subdirectory
+				prefixQuery.should(QueryBuilders.prefixQuery("hostStringWithPath", hostStringWithPath));
 			} else {
-				//This URL does not contain a slash, so we can do an exact match on hostString (which is more efficient)
-				prefixQuery.should(QueryBuilders.termQuery("hostString", originalUrlWithoutProtocol));
+				//This hostStringWithPath does not contain a slash, so we can do an exact match on hostString (which is more efficient)
+				prefixQuery.should(QueryBuilders.termQuery("hostString", hostStringWithPath));
 			}
 		}
+		
 		//Handle matching for related hosts
-		for(String relatedUrlPrefixString : siteData.relatedUrlPrefixStrings) {
-			if(relatedUrlPrefixString.contains("/")) {
-				//If this URL contains a slash, then we must do a prefix match because we need to match on a subdirectory
-				prefixQuery.should(QueryBuilders.prefixQuery("originalUrlWithoutProtocol", relatedUrlPrefixString));
+		for(String relatedUrlWithPathString : siteData.relatedHostStringsWithPath) {
+			if(relatedUrlWithPathString.contains("/")) {
+				//If this relatedUrlWithPathString contains a slash, then we must do a prefix match because we need to match on a subdirectory
+				prefixQuery.should(QueryBuilders.prefixQuery("hostStringWithPath", relatedUrlWithPathString));
 			} else {
-				//This URL does not contain a slash, so we can do an exact match on hostString (which is more efficient)
-				prefixQuery.should(QueryBuilders.termQuery("hostString", relatedUrlPrefixString));
+				//This relatedUrlWithPathString does not contain a slash, so we can do an exact match on hostString (which is more efficient)
+				prefixQuery.should(QueryBuilders.termQuery("hostString", relatedUrlWithPathString));
 			}
 		}
 		
@@ -111,13 +113,12 @@ public class PageDataToSolrWorker implements Runnable {
 			.setQuery(prefixQuery)
 	        .setSearchType(SearchType.SCAN)
 	        .setScroll(new TimeValue(60_000)) //60 seconds should be enough time to process EACH scroll batch
-	        .setSize(50).execute().actionGet(); //50 hits per shard will be returned for each scroll
+	        .setSize(300).execute().actionGet(); //X hits per shard will be returned for each scroll
 		//Scroll until no hits are returned
 		while (true) {
 		    for (SearchHit hit : scrollResp.getHits().getHits()) {
 		        PageData pageData = PageData.getPageDataFromElasticsearchHit(hit);
 		        pageData.sendToSolr(SolrHelper.getPagesSolrClient(), siteData);
-		        break; //TODO: Don't break here!
 		    }
 		    scrollResp = ElasticsearchHelper.getTransportClient().prepareSearchScroll(scrollResp.getScrollId()).setScroll(new TimeValue(600000)).execute().actionGet();
 		    //Break condition: No hits are returned
@@ -126,11 +127,9 @@ public class PageDataToSolrWorker implements Runnable {
 		    }
 		}
 		
-		//2) Index those Pages into Solr using pageData.sendToSolr(SolrHelper.getPagesSolrClient(), siteData)
-		
 		//If we finished processing the site and didn't encounter any errors, mark this site file as processed by clearing the status 
 		try {
-			//TODO: Change line below to blank status
+			//TODO: Change line below to blank status instead of STATUS_UPDATED
 			this.siteData.status = SiteData.STATUS_UPDATED;
 			this.siteData.sendToElasticsearch(ElasticsearchHelper.getTransportClient());
 			ElasticsearchHelper.flushIndexChanges(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME);
@@ -143,13 +142,16 @@ public class PageDataToSolrWorker implements Runnable {
 	public void deleteSolrPagesForSiteDataAndRemoveSiteFromElasticsearchIndex(SiteData siteData) {
 		
 		//TODO: Processing
-		//1) Get associated Pages for this site (scroll through Elasticsearch results)
+		//1) Get associated Pages for this site (liked by bib_id) (and then scroll through Elasticsearch results)
 		//2) Delete those Solr docs
+		
+		
+		
+		
 		
 		//If we finished processing the site and didn't encounter any errors, delete this site from Elasticsearch 
 		try {
 			siteData.deleteFromElasticsearch(ElasticsearchHelper.getTransportClient());
-			System.out.println("Would have cleared status for updated file.");
 			ElasticsearchHelper.flushIndexChanges(HrwaManager.ELASTICSEARCH_SITE_INDEX_NAME);
 		} catch (IOException e) {
 			HrwaManager.logger.error("An IOException occurred while trying to delete an Elasticsearch Site record. Site bib id: " + this.siteData.bibId);

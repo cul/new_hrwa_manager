@@ -51,15 +51,16 @@ public class SiteData {
 	private static HashMap<String, String> geographicAreasToFullNames = getGeographicAreasToFullNamesMap();
 	private static HashMap<String, String> countryCodesToFullNamesMap = getCountryCodesToFullNamesMap();
 	private static HashMap<String, String> languageCodesToFullNamesMap = getLanguageCodesToFullNamesMap();
-	private static HashMap<String, ArrayList<String>> hostStringsToRelatedUrlPrefixStrings = getHostStringsToRelatedUrlPrefixStrings();
+	private static HashMap<String, ArrayList<String>> hostStringsToRawRelatedHosts = getHostStringsToRelatedHostStringsWithPath();
 
 	public String bibId = null;
 	public String marc005LastModified = null;
 	public String status = SiteData.STATUS_NONE; //default value
 	
 	public ArrayList<String> hostStrings = new ArrayList<String>();
-	public HashSet<String> relatedUrlPrefixStrings = new HashSet<String>();
-	public ArrayList<String> originalUrlWithoutProtocol = new ArrayList<String>();
+	public ArrayList<String> hostStringsWithPath = new ArrayList<String>();
+	public HashSet<String> relatedHostStrings = new HashSet<String>();
+	public HashSet<String> relatedHostStringsWithPath = new HashSet<String>();
 	
 	public ArrayList<String> originalUrl = new ArrayList<String>();
 	public ArrayList<String> archivedUrl = new ArrayList<String>();
@@ -102,14 +103,15 @@ public class SiteData {
 				).replaceAll(" +", " "); //replaceAll with regex to convert multiple spaces into a single space
 				if( ! result.isEmpty() ) {
 					this.originalUrl.add(result);
-					this.originalUrlWithoutProtocol.add(MetadataUtils.removeProtocolFromUrlString(result));
-					String resultAsHostString = MetadataUtils.extractHostString(result);
-					this.hostStrings.add(resultAsHostString);
+					String hostString = MetadataUtils.extractHostString(result);
+					this.hostStrings.add(hostString);
+					this.hostStringsWithPath.add(MetadataUtils.extractHostStringWithPath(result));
 					
-					//Set relatedUrlPrefixes based on hostString
-					if(SiteData.hostStringsToRelatedUrlPrefixStrings.containsKey(resultAsHostString)) {
-						for(String relatedUrlPrefixString : hostStringsToRelatedUrlPrefixStrings.get(resultAsHostString)) {
-							this.relatedUrlPrefixStrings.add(relatedUrlPrefixString); 
+					//Get related hosts based on hostString (this is how we've been doing it so far)
+					if(SiteData.hostStringsToRawRelatedHosts.containsKey(hostString)) {
+						for(String rawRelatedHost : hostStringsToRawRelatedHosts.get(hostString)) {
+							this.relatedHostStrings.add(MetadataUtils.extractHostString(rawRelatedHost));
+							this.relatedHostStringsWithPath.add(MetadataUtils.extractHostStringWithPath(rawRelatedHost));
 						}
 					}
 				}
@@ -283,7 +285,7 @@ public class SiteData {
 		if(bibId == null) { validationErrors.add("Missing bibId."); }
 		if(marc005LastModified == null) { validationErrors.add("Missing marc005LastModified."); }
 		if(originalUrl.size() == 0) { validationErrors.add("Missing originalUrl."); }
-		if(originalUrlWithoutProtocol.size() == 0) { validationErrors.add("Missing originalUrlsWithoutProtocol (derived from originalUrl)."); }
+		if(hostStringsWithPath.size() == 0) { validationErrors.add("Missing originalUrlsWithoutProtocol (derived from originalUrl)."); }
 		if(archivedUrl.size() == 0) { validationErrors.add("Missing archivedUrl."); }
 		if(hostStrings.size() == 0) { validationErrors.add("Missing hostString (derived from originalUrl)."); }
 		if(organizationType == null) { validationErrors.add("Missing organizationType."); }
@@ -1832,10 +1834,10 @@ public class SiteData {
 		return geographicAreasToFullNames;
 	}
 	
-	public static HashMap<String, ArrayList<String>> getHostStringsToRelatedUrlPrefixStrings() {
+	public static HashMap<String, ArrayList<String>> getHostStringsToRelatedHostStringsWithPath() {
 		if(new File(HrwaManager.relatedHostsFile).exists()) {
 			try {
-				return relatedUrlPrefixStringsFromReader(new FileReader(HrwaManager.relatedHostsFile));
+				return relatedUrlDataFromReader(new FileReader(HrwaManager.relatedHostsFile));
 			} catch (FileNotFoundException e) {
 				HrwaManager.logger.error("Unable to find related hosts CSV file at: " + HrwaManager.relatedHostsFile + "\n" + e.getMessage());
 				e.printStackTrace();
@@ -1849,12 +1851,12 @@ public class SiteData {
 	 * This method is only here for unit testing purposes.
 	 * @throws UnsupportedEncodingException 
 	 */
-	public static void overrideRelatedUrlPrefixDataFromStreamSource(InputStream relatedHostsCsvInputStream) throws UnsupportedEncodingException {
-		SiteData.hostStringsToRelatedUrlPrefixStrings = relatedUrlPrefixStringsFromReader(new InputStreamReader(relatedHostsCsvInputStream, "UTF-8"));
+	public static void overrideRelatedUrlDataFromStreamSource(InputStream relatedHostsCsvInputStream) throws UnsupportedEncodingException {
+		SiteData.hostStringsToRawRelatedHosts = relatedUrlDataFromReader(new InputStreamReader(relatedHostsCsvInputStream, "UTF-8"));
 	}
 	
-	public static HashMap<String, ArrayList<String>> relatedUrlPrefixStringsFromReader(Reader reader) {
-		HashMap<String, ArrayList<String>> hostStringsToRelatedUrlPrefixStrings = new HashMap<String, ArrayList<String>>();
+	public static HashMap<String, ArrayList<String>> relatedUrlDataFromReader(Reader reader) {
+		HashMap<String, ArrayList<String>> hostStringsToRelatedHosts = new HashMap<String, ArrayList<String>>();
 		
 		CSVReader csvReader;
 		try {
@@ -1867,12 +1869,12 @@ public class SiteData {
 		        }
 		        
 		        String keyHostString = csvRow[0].trim();
-		        String valueHostString = csvRow[1].trim();
+		        String valueRelatedHost = csvRow[1].trim();
 		        
-		    	if( ! hostStringsToRelatedUrlPrefixStrings.containsKey(keyHostString) ) {
-		    		hostStringsToRelatedUrlPrefixStrings.put(keyHostString, new ArrayList<String>());
+		    	if( ! hostStringsToRelatedHosts.containsKey(keyHostString) ) {
+		    		hostStringsToRelatedHosts.put(keyHostString, new ArrayList<String>());
 		    	}
-		    	hostStringsToRelatedUrlPrefixStrings.get(keyHostString).add(valueHostString);
+		    	hostStringsToRelatedHosts.get(keyHostString).add(valueRelatedHost);
 		     }
 		     csvReader.close();
 		} catch (IOException e) {
@@ -1880,7 +1882,7 @@ public class SiteData {
 			e.printStackTrace();
 			System.exit(HrwaManager.EXIT_CODE_ERROR);
 		}
-		return hostStringsToRelatedUrlPrefixStrings;
+		return hostStringsToRelatedHosts;
 	}
 	
 	public static void creatElastisearchIndexIfNotExist() {
@@ -1896,10 +1898,11 @@ public class SiteData {
 						.startObject("status")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("bibId")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("marc005LastModified")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("relatedUrlPrefixStrings")		.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("originalUrl")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
-			    		.startObject("originalUrlWithoutProtocol")	.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("hostStrings")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("hostStringsWithPath")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("relatedHostStrings")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
+			    		.startObject("relatedHostStringsWithPath")	.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("archivedUrl")					.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("organizationType")			.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
 			    		.startObject("subject")						.field("type", "string").field("store", false).field("index", "not_analyzed").endObject() //do not analyze (indexed as is)
@@ -1927,10 +1930,11 @@ public class SiteData {
 		if(this.status != null) { builder.field("status", this.status); }
 		if(this.bibId != null) { builder.field("bibId", this.bibId); }
 		if(this.marc005LastModified != null) { builder.field("marc005LastModified", this.marc005LastModified); }
-		if(this.hostStrings.size() != 0) { builder.field("hostStrings", this.hostStrings); }
 		if(this.originalUrl.size() != 0) { builder.field("originalUrl", this.originalUrl); }
-		if(this.originalUrlWithoutProtocol.size() != 0) { builder.field("originalUrlWithoutProtocol", this.originalUrlWithoutProtocol); }
-		if(this.relatedUrlPrefixStrings.size() != 0) { builder.field("relatedUrlPrefixStrings", this.relatedUrlPrefixStrings); }
+		if(this.hostStrings.size() != 0) { builder.field("hostStrings", this.hostStrings); }
+		if(this.hostStringsWithPath.size() != 0) { builder.field("hostStringsWithPath", this.hostStringsWithPath); }
+		if(this.relatedHostStrings.size() != 0) { builder.field("relatedHostStrings", this.relatedHostStrings); }
+		if(this.relatedHostStringsWithPath.size() != 0) { builder.field("relatedHostStringsWithPath", this.relatedHostStringsWithPath); }
 		if(this.archivedUrl.size() != 0) { builder.field("archivedUrl", this.archivedUrl); }
 		if(this.organizationType != null) { builder.field("organizationType", this.organizationType); }
 		if(this.subject.size() != 0) { builder.field("subject", this.subject); }
@@ -2019,24 +2023,29 @@ public class SiteData {
 			siteData.status = (String)sourceAsMap.get("status");
 		}
 
+		//originalUrl
+		if(sourceAsMap.containsKey("originalUrl")) {
+			siteData.originalUrl.addAll((ArrayList<String>)sourceAsMap.get("originalUrl"));
+		}
+
 		//hostString
 		if(sourceAsMap.containsKey("hostStrings")) {
 			siteData.hostStrings.addAll((ArrayList<String>)sourceAsMap.get("hostStrings"));
 		}
 		
+		//hostStringsWithPath
+		if(sourceAsMap.containsKey("hostStringsWithPath")) {
+			siteData.hostStringsWithPath.addAll((ArrayList<String>)sourceAsMap.get("hostStringsWithPath"));
+		}
+
 		//relatedHostStrings
 		if(sourceAsMap.containsKey("relatedHostStrings")) {
-			siteData.relatedUrlPrefixStrings.addAll((ArrayList<String>)sourceAsMap.get("relatedHostStrings"));
+			siteData.relatedHostStrings.addAll((ArrayList<String>)sourceAsMap.get("relatedHostStrings"));
 		}
 		
-		//originalUrl
-		if(sourceAsMap.containsKey("originalUrl")) {
-			siteData.originalUrl.addAll((ArrayList<String>)sourceAsMap.get("originalUrl"));
-		}
-		
-		//originalUrlWithoutProtocol
-		if(sourceAsMap.containsKey("originalUrlWithoutProtocol")) {
-			siteData.originalUrlWithoutProtocol.addAll((ArrayList<String>)sourceAsMap.get("originalUrlWithoutProtocol"));
+		//relatedHostStrings
+		if(sourceAsMap.containsKey("relatedHostStringsWithPath")) {
+			siteData.relatedHostStringsWithPath.addAll((ArrayList<String>)sourceAsMap.get("relatedHostStringsWithPath"));
 		}
 		
 		//archivedUrl

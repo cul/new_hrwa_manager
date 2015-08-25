@@ -27,19 +27,19 @@ public class SiteDataTest {
 	@Test
     public void extractDataFromMarcXmlFile() throws UnsupportedEncodingException {
     	
-		SiteData.overrideRelatedUrlPrefixDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
+		SiteData.overrideRelatedUrlDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
 		
     	//Marc XML File
     	SiteData siteData = new SiteData(this.getClass().getResourceAsStream("/sample-marcxml.xml"));
     	
     	//originalUrl
     	ArrayList<String> expectedOriginalUrl = new ArrayList<String>();
-    	expectedOriginalUrl.add("http://www.518.org");
+    	expectedOriginalUrl.add("http://www.518.org/123");
 		assertEquals(expectedOriginalUrl, siteData.originalUrl);
 		
 		//archivedUrl
     	ArrayList<String> expectedArchivedUrl = new ArrayList<String>();
-    	expectedArchivedUrl.add("http://wayback.archive-it.org/1068/*/http://www.518.org");
+    	expectedArchivedUrl.add("http://wayback.archive-it.org/1068/http://www.518.org/123");
 		assertEquals(expectedArchivedUrl, siteData.archivedUrl);
     	
     	//hostString
@@ -47,10 +47,19 @@ public class SiteDataTest {
     	expectedHostStrings.add("518.org");
 		assertEquals(expectedHostStrings, siteData.hostStrings);
 		
+		ArrayList<String> expectedHostStringsWithPath = new ArrayList<String>();
+    	expectedHostStringsWithPath.add("518.org/123");
+		assertEquals(expectedHostStringsWithPath, siteData.hostStringsWithPath);
+		
 		//relatedHostStrings
 		HashSet<String> expectedRelatedHostStrings = new HashSet<String>();
 		expectedRelatedHostStrings.add("hrwa-test-mapping.columbia.edu");
-		assertEquals(expectedRelatedHostStrings, siteData.relatedUrlPrefixStrings);
+		assertEquals(expectedRelatedHostStrings, siteData.relatedHostStrings);
+		
+		//relatedHostStringsWithPath
+		HashSet<String> expectedRelatedHostStringsWithPath = new HashSet<String>();
+		expectedRelatedHostStringsWithPath.add("hrwa-test-mapping.columbia.edu/123");
+		assertEquals(expectedRelatedHostStringsWithPath, siteData.relatedHostStringsWithPath);
 		
 		//organizationType
 		assertEquals("Non-governmental organizations", siteData.organizationType);
@@ -132,7 +141,7 @@ public class SiteDataTest {
     @Test
     public void serializeSiteDataToElasticsearchJson() throws UnsupportedEncodingException {
     	
-    	SiteData.overrideRelatedUrlPrefixDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
+    	SiteData.overrideRelatedUrlDataFromStreamSource(this.getClass().getResourceAsStream("/related_hosts.csv")); //Because we don't want to rely on command line args in our test
     	
     	SiteData siteData = new SiteData(this.getClass().getResourceAsStream("/sample-marcxml.xml"));
     	siteData.status = SiteData.STATUS_UPDATED;
@@ -149,11 +158,12 @@ public class SiteDataTest {
 			"\"status\":\"" + SiteData.STATUS_UPDATED + "\"," +
 			"\"bibId\":\"7832247\"," +
 			"\"marc005LastModified\":\"20120418210020.0\"," +
+			"\"originalUrl\":[\"http://www.518.org/123\"]," +
 			"\"hostStrings\":[\"518.org\"]," +
-			"\"originalUrl\":[\"http://www.518.org\"]," +
-			"\"originalUrlWithoutProtocol\":[\"www.518.org\"]," +
-			"\"relatedUrlPrefixStrings\":[\"hrwa-test-mapping.columbia.edu\"]," +
-			"\"archivedUrl\":[\"http://wayback.archive-it.org/1068/*/http://www.518.org\"]," +
+			"\"hostStringsWithPath\":[\"518.org/123\"]," +
+			"\"relatedHostStrings\":[\"hrwa-test-mapping.columbia.edu\"]," +
+			"\"relatedHostStringsWithPath\":[\"hrwa-test-mapping.columbia.edu/123\"]," +
+			"\"archivedUrl\":[\"http://wayback.archive-it.org/1068/http://www.518.org/123\"]," +
 			"\"organizationType\":\"Non-governmental organizations\"," +
 			"\"subject\":[\"Human rights\",\"Kwangju Uprising, Kwangju-si, Korea, 1980\",\"Civil rights movements\"]," +
 			"\"geographicFocus\":[\"Korea (South)\"]," +
