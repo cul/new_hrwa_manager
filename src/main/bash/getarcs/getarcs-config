@@ -1,0 +1,4 @@
+archiveit_username='your-username'
+archiveit_password='your-password'
+archiveit_collection_id='your-collection-id'
+archive_download_directory='/path/to/download/directory'
