@@ -6,7 +6,7 @@ then
   exit
 fi
 
-# Bring in $archiveit_user, $archiveit_password, $archiveit_collection_id and $archive_download_directory variables
+# Bring in $archiveit_username, $archiveit_password, $archiveit_collection_id and $archive_download_directory variables
 source ./getarcs-config
 
 base_run_directory=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
